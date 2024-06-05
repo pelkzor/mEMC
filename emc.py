@@ -1,9 +1,7 @@
 import socket
 import json
-import sys
 import time
 from matplotlib import pyplot as plt
-from matplotlib.widgets import Cursor
 from matplotlib import ticker
 import mplcursors
 
@@ -15,22 +13,22 @@ import numpy as np
 class Config:
     pass
 
-def cfg_condqp():
+def cfg_condqp():   #conducted emf by cable - quasi filter
     return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 'fstop':30000000, 'sweeptime': 15, 'rbw':9000, 'vbw':9000, 'amp':0, 'atten':0, 'detector':'QPEak', 'emifilter':1, 'sweeppoints':601, 'sweepcount':1, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}
 
-def cfg_cond2():
+def cfg_cond2():    #generic cibduced emf
     return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':1, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}        
     
-def cfg_cond1():
+def cfg_cond1():    #generic condiced emf
     return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}
 
-def cfg_rad1():
+def cfg_rad1():     #datiation emmission
     return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 'fstop':1000000000, 'sweeptime': 0.2, 'rbw':120000, 'vbw':120000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
 
-def cfg_radcoarse():
+def cfg_radcoarse():    #Less resolution
     return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 'fstop':1000000000, 'sweeptime': 0.2, 'rbw':1000000, 'vbw':1000000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
 
-def cfg_mt100():
+def cfg_mt100():        #Specifc to measurement transformer
     return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':150000, 'fstop':100000000, 'sweeptime': 0.2, 'rbw':9000, 'vbw':9000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
 
 class Measurement:
