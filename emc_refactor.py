@@ -13,7 +13,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import time
 from datetime import datetime
-
+import json
 
 from DSA832_instrument import DSA832
 
@@ -38,6 +38,12 @@ class Session:
         self.data = []          # Y-axis of read data
         self.datax = []         # X-axis of read data
 
+        # Parent dictionary. Contains filename, data of creation, description
+        # and list of measurements
+        self.parent_dict = {}
+        # Dictionary for each iteration
+
+
     # Creates json file to store data in
     # Stores device configuration / settings
     # Loads correction data
@@ -45,19 +51,26 @@ class Session:
         self.logtime = datetime.now.strftime("%H%M%S")
         date = datetime.now.strftime("%Y%m%d")
         self.savefile = self.savefile + date + self.logtime
-        # Create save file (\todo Change to json)
-        with open(self.savefile,'w') as f:     
-            f.write("Filename: ", self.savefile, "\n")
-            f.write("Time: ", self.logtime, "\n")
-            f.write("Description: ", self.session_desc, "\n")
-        
+
+        self.parent_dict["Date Created"] = date
+        self.parent_dict["File Name"] = self.savefile
+        self.parent_dict["Description"] = self.session_desc
+
         # Start collecting data
+        measure_count = 0
         while(1):
-           self.measure()
+           self.measure(measure_count)
 
     # Iterate 1 measurement
-    def measure(self):
-         # Clear buffers
+    def measure(self,count):
+        
+        logtime = datetime.now.strftime("%H%M%S")
+        # Initalise dictionary
+        measure_dict = {}
+        measure_dict["TimeStamp"] = logtime
+        measure_dict["Configuration"] = self.meas.cfg
+
+        # Clear buffers
         self.data = []      
         self.datax = []
 
@@ -66,12 +79,21 @@ class Session:
         # Apply corrections
         self.data, self.datax = applycorrection(self.data, self.datax, self.fclist)
 
-        # save config to file
-        f.write("Config: ", self.meas.cfg, "\n")
+        # Save data to dictionary
+        measure_dict["Datay"] = self.data
+        measure_dict["Datax"] = self.datax
+
         # request notes and save
         note = input("Write Note Now: ")
+        measure_dict["Note"] = note    
+
+        # Append to Parent dictionary
+        self.parent_dict["measure" + str(count)] = measure_dict
+
+        # Save to file
         self.savedata() 
-        # Modify Configuration?
+
+        # Modify Configuration
         print("Modify Config:")
         print("0. No change")
         print("1. Default\n2. Condqp - Conducted emf w/ quasi filter")
@@ -80,14 +102,15 @@ class Session:
         print("5. Rad1 - Radiation emmission")
         print("6. Radcoarse - Radition Emmission (Coarse)")
         print("7. Mt100 - Measurement transformer specific")
-        config_opt = input()
+        config_opt = int(input())
+        # only call config change methods if default option is not selected
         if(config_opt > 0):
             self.meas.update_config(config_opt)
 
-
     # save dictionary to file
     def savedata(self):
-        pass
+        with open(self.savefile, mode = "w") as f:
+            json.dump(self.parent_dict, f)
 
 
 '''
@@ -100,7 +123,7 @@ class Config:
 
     @classmethod
     # return correct configuration based on number provided
-    def get_config(opt):
+    def get_config(opt: int):
         # Dictionary associating options provided with configuration methods
         configs = {1: Config.cfg_default,
                 2: Config.cfg_condqp,
@@ -217,9 +240,31 @@ class Measurement:
         step = (self.cfg['fstop'] - self.cfg['fstart']) / len(self.data)
         self.datax = [ self.cfg['fstart'] + step//2 + n * step for n in range(len(self.data))]
 
-    # Measure all spectrum windows
+    # Measure all spectrum windows and return data
     def measure(self):
-        pass
+        # Clear data buffer
+        self.data = []
+
+        for k,v in self.cfg.items():    #????????????????????????????????
+            if v != None:
+                self[k] = v
+
+        for m in self.mlist:
+            self['fstart'] = m[0]
+            self['fstop'] = m[1]            
+            self['tracemode'] = self.cfg['tracemode']            
+            sweeptime = self.cmd('sweeptime','?')            
+            self['initiate'] = 1            
+            print('st = ', sweeptime)
+            print ('sleeping ', sweeptime * self.cfg['sweepcount'] + 1, 's')
+            time.sleep(sweeptime * self.cfg['sweepcount'] + 1)
+            while(self.cmd('sweepcountcurrent','?') != self.cfg['sweepcount']):
+                time.sleep(sweeptime * meas.cfg['sweepcount'] + 1)
+            self.data.extend(self.cmd('tracedata',1))
+        
+        self.setdatafreq()
+
+        return self.data, self.datax
 
     # Update configuration of the measure class
     def update_config(self, opt: int):
@@ -337,3 +382,6 @@ csv = signal level, freq (Hz)           # how to store data in json
 
 5. should be able to reconfig instrument during session
 '''
+
+dev = DSA832()
+session = Session(dev, "Test", "Hi!")
