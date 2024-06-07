@@ -27,6 +27,8 @@ import time
 from datetime import datetime
 import json
 import os
+import glob
+
 
 from DSA832_instrument import DSA832
 
@@ -67,9 +69,11 @@ class Session:
         
         # If no name was provided for the savefile, assign current time
         if self.savefilename != "":
-            self.savefilename = f'{session_folder}/{self.savefilename}_{start_time}'
+            #self.savefilename = f'{session_folder}/{self.savefilename}_{start_time}'
+            self.savefilename = f'{session_folder}/{self.savefilename}'
         else:
-            self.savefilename = f'{session_folder}/{start_time}'
+            #self.savefilename = f'{session_folder}/{start_time}'
+            self.savefilename = f'{session_folder}/Record'
 
         self.parent_dict["Date Created"] = date
         self.parent_dict["File Name"] = self.savefilename
@@ -104,10 +108,12 @@ class Session:
         # Apply corrections
         data, datax = applycorrection(self.data, self.datax, self.fclist)
         '''
-        # TESTING
-        data, datax =  load_sessiondata("session_test.csv")
-        fclist = loadcorrection('tbaf1m.csv')
-        data, datax = applycorrection(data, datax, fclist)
+        # TESTING. Loads data from a previous json recording. Simulating reading
+        # Data from actual instrument as above
+        diction = load_sessiondata("session_test.json")["measure0"]
+        data = diction["Sig_Level"]
+        datax = diction['Frequency']
+        data, datax = applycorrection(data, datax, self.fclist)
         ''''''
 
         # Save data to dictionary
@@ -140,6 +146,7 @@ class Session:
 
     # save dictionary to file
     def savedata(self, file):
+        file = f'{file}.json'
         with open(file, mode = "w") as f:
             json.dump(self.parent_dict, f, indent=4)
 
@@ -324,16 +331,12 @@ class Measurement:
 
 
 # Loads readings from previous session. To be used for plotting / data manipulation
-# (\todo switch to json)
 def load_sessiondata(fname):
-    data = []               # Y-axis
-    datax = []              # X-axis    
-    with open(fname, 'r') as f:
-        for line in f:
-            v = line.split(',')
-            datax.append(float(v[0]))
-            data.append(float(v[1]))   
-    return data, datax
+    # Read the JSON file and load its contents into a dictionary
+    with open(fname, 'r') as file:
+        dict = json.load(file)
+    
+    return dict
 
 # Load correction data from csv
 def loadcorrection(fname):
@@ -400,6 +403,7 @@ def getpeaks(lag, threshold, influence, data, datax):
 def plot(data, datax, notes = "", savefile = "Plot", ref=None, peaklist = None): 
     limit = [ 50 if x < 230000000 else 58 for x in datax]
         
+    plt.figure()
     plt.plot(datax, data, datax, limit, linewidth = 0.5)
     if ref:
         plt.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
@@ -421,13 +425,57 @@ def plot(data, datax, notes = "", savefile = "Plot", ref=None, peaklist = None):
 # Read measured data, process, print peaks, plot 
 def plot_measured(data_filename):
 
-    data, datax =  load_sessiondata(data_filename)
+    parent_dict = load_sessiondata(data_filename)
     fclist = loadcorrection('tbaf1m.csv')
+    
+    # Iterate through the json file for each measure keyword until none are left
+    for i in range(100):
+        measure_key = f"measure{i}"
+        # Search for measurement key in json file
+        measurement = parent_dict.get(measure_key, "Nonexistent")
+        # Return nonexisent keyword if not found
+        if(measurement == "Nonexistent"):
+            # Assume all keys found and plotted. exit
+            print("All Measurements Plotted!")
+            break
+            
+        # Access all information and isolate
+        data = measurement["Sig_Level"]
+        datax = measurement["Frequency"]
+        note = measurement["Note"]
+        config = measurement["Configuration"]
+        image_note = f'{note}\nConfig: {config}'
+
     data, datax = applycorrection(data, datax, fclist)
-    plot(data, datax)
+    plot(data, datax, image_note)
+
+def list_json_files():
+
+    # Ensure the folder path is correct
+    if not os.path.exists("Measurements"):
+        print(f"Folder Measurements does not exist.")
+    else:
+        # Use glob to find all JSON files in the folder
+        json_files = glob.glob(os.path.join("Measurements", '**/*.json'))
+
+        # Print the list of JSON files found
+        if json_files:
+            print("Found JSON files:")
+            count = 0
+            for json_file in json_files:
+                print(f'{count}. {json_file}')
+                count += 1
+        else:
+            print("No JSON files found in the folder.")
+
+    return json_files
 
 # API's
 def meas_instr():
     #dev = DSA832()
     Session("dev", "Test", input("Test Description:")).begin()
 
+def meas_plot():
+    files = list_json_files()
+    selection = int(input("Select file to plot: "))
+    plot_measured(files[selection])
