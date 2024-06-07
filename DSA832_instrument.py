@@ -125,20 +125,3 @@ class DSA832(Instrument):
         v = data.split(',')
         v[0] = v[0].split()[1]
         return [ float(n) for n in v]
-
-    ''' 
-    # Receive trace data and process as required
-    def gettrace(self, tracenum=1):
-        self.data = b''
-        # Request specific trave from device
-        self.send(':TRACe:DATA? TRACE' + str(tracenum))
-        # Wait for response
-        time.sleep(0.5)
-        d = self.recv()
-        # Format recived data as required
-        self.trace = self.processtrace(d)
-        fstart = 0
-        fstop = 3200000000
-        # Scale data
-        self.scalex = [fstart + n*(fstop-fstart)/len(self.trace) for n in range(len(self.trace))]
-        '''

@@ -36,9 +36,4 @@ class Instrument():
     # Format trace data
     def processtrace(self, data):
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
-    '''
-    @abstractmethod 
-    # Receive trace data and process as required
-    def gettrace(self,tracenum=1):
-        print("Error: ", inspect.stack()[0][3], " Un-implemented")
-    ''' 
+  
