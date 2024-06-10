@@ -312,16 +312,40 @@ class Measurement:
         self.create()
 
         for m in self.mlist:
-            self.cfg['fstart'] = m[0]       # Start recording from current window start frequency
-            self.cfg['fstop'] = m[1]            # End recording at next window start frequency
-            #self['tracemode'] = self.cfg['tracemode']            
+            # Commented out setter function in DSA832 implementation. Kept in case required for future
+            '''
+            # Send configuration commands to device
+            self.device['fstart'] = m[0]       # Start recording from current window start frequency
+            self.device['fstop'] = m[1]    # End recording at next window start frequency
+            self.device['tracemode'] = self.cfg['tracemode']            
+            # Request sweep time
             sweeptime = self.device.cmd('sweeptime','?')            
-            self.cfg['initiate'] = 1            
+            # initiate request of data
+            self.device['initiate'] = 1
+            '''
+
+            # Send configuration commands to device
+            self.device.cmd('fstart',m[0])
+            self.device.cmd('fstop', m[1])
+            self.device.cmd('tracemode', self.cfg['tracemode'])
+            # Request sweep time
+            sweeptime = self.device.cmd('sweeptime','?')
+            # calculate time delay
+            wait_time = sweeptime * self.cfg['sweepcount'] + 1     
+            # Initiate read of data
+            self.device.cmd('initiate', 1)       
+
             print('st = ', sweeptime)
-            print ('sleeping ', sweeptime * self.cfg['sweepcount'] + 1, 's')
-            time.sleep(sweeptime * self.cfg['sweepcount'] + 1)
-            while(self.device.cmd('sweepcountcurrent','?') != self.cfg['sweepcount']):
-                time.sleep(sweeptime * self.cfg['sweepcount'] + 1)
+            print ('sleeping ', wait_time, 's')
+            
+            while(1):
+                time.sleep(wait_time)
+                # Device should now be sweeping through windows
+                # Keep checking till the current sweep count is the max sweep count requested
+                if(self.device.cmd('sweepcountcurrent','?') == self.cfg['sweepcount']):
+                    break
+            
+            # Trace should be completed by now. Request entire trace
             self.data.extend(self.device.cmd('tracedata',1))
         
         self.setdatafreq()
@@ -422,7 +446,7 @@ def plot(data, datax, notes = "", savefile = "Plot", ref=None, peaklist = None):
     plt.tight_layout()
     plt.grid()
     #plt.savefig(f'{savefile}.png')
-    plt.show()
+    plt.show(block=False)
 
     
 # Read measured data, process, print peaks, plot 

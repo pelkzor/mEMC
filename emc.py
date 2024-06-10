@@ -3,7 +3,7 @@ import json
 import time
 from matplotlib import pyplot as plt
 from matplotlib import ticker
-import mplcursors
+#import mplcursors
 
 from itertools import groupby
 import numpy as np
@@ -526,8 +526,8 @@ def measrad(i, name,cfg=None):
     m.savedata(m.description)
     return m
 
-#i=DSA832()
-
+i=DSA832()
+meas(i,"hi")
 
 #bg=Measurement('comdry-bg.csv')
 #t1=Measurement('comdry-back-0deg-lcd-nokeys.csv')

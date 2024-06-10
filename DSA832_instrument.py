@@ -20,7 +20,6 @@ class DSA832(Instrument):
     def __init__(self, ip = "192.168.1.70"):
         self.data = b''         # Raw data recieved from device
         self.trace = None       # trace data recovered from raw data recieved
-        #self.scalex = 0       
 
         # Load commands
         self.loadcmd()
@@ -127,3 +126,16 @@ class DSA832(Instrument):
         v = data.split(',')
         v[0] = v[0].split()[1]
         return [ float(n) for n in v]
+    
+    '''
+    # Used to configure device. 
+    # usage example: dev.['initiate'] = 1
+    def __setitem__(self, name, value):
+        if name not in self.inst:            
+            print('Error: Unknown command')
+    
+        if type(value) == tuple:
+            return self.cmd(name, *value)
+        else:
+            return self.cmd(name, value)
+    '''
