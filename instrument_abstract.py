@@ -33,7 +33,7 @@ class Instrument():
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
         
     @abstractmethod
-    # Format trace data
+    # Format raw data into floats
     def processtrace(self, data):
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
   

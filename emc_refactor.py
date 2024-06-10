@@ -8,6 +8,22 @@ Session is a set of measurements and notes.
 Measurement entries contain filename of measurement.
 Note entries contain date/time and note text
 '''
+'''
+1. Remove ocnbfiguration in image
+2. Remove saving image automatically
+
+Additions for GUI:
+1. Ability to compare multiple plots (Plot lay over)
+2. List all json files as a tree structure - look into it
+3. 
+
+
+[List of sessions][List of measurements of selected session][Seleciton of measurements for comparison]
+[Small description of measuremenyt text box][Plot button]
+
+'''
+
+
 
 '''
 1. Each measurement should only be called once. No while loop
@@ -61,8 +77,8 @@ class Session:
 
         # Append date and time to given folder and file name
         curr_time = datetime.now()
-        start_time = curr_time.strftime("%H:%M:%S")
-        date = curr_time.strftime("%Y:%m:%d")
+        start_time = curr_time.strftime("%H%M%S")
+        date = curr_time.strftime("%Y%m%d")
 
         # Create save folder
         session_folder = self.create_folders(date, start_time)
@@ -89,7 +105,7 @@ class Session:
     # Iterate 1 measurement
     def measure(self,count):
         curr_time = datetime.now()
-        logtime = curr_time.strftime("%H:%M:%S")
+        logtime = curr_time.strftime("%H%M%S")
         # Initalise dictionary for current measurement 
         measure_dict = {}
         measure_dict["TimeStamp"] = logtime
@@ -102,19 +118,21 @@ class Session:
         # Clear buffers
         data = []      
         datax = []
-        '''
+        
+
         # Read data
-        data, datax = self.meas.measures()
+        data, datax = self.meas.measure()
         # Apply corrections
-        data, datax = applycorrection(self.data, self.datax, self.fclist)
-        '''
-        # TESTING. Loads data from a previous json recording. Simulating reading
+        data, datax = applycorrection(data, datax, self.fclist)
+        
+    
+        '''# TESTING. Loads data from a previous json recording. Simulating reading
         # Data from actual instrument as above
         diction = load_sessiondata("session_test.json")["measure0"]
         data = diction["Sig_Level"]
         datax = diction['Frequency']
         data, datax = applycorrection(data, datax, self.fclist)
-        ''''''
+        '''
 
         # Save data to dictionary
         measure_dict["Sig_Level"] = data
@@ -127,8 +145,7 @@ class Session:
         self.savedata(f'{self.savefilename}') 
 
         # Generate plot
-        image_note = f'{note}\nConfig: {self.meas.cfg}'
-        plot(data, datax, image_note, f'{self.savefilename}_measure_{count}')
+        plot(data, datax, note, f'{self.savefilename}_measure_{count}')
 
         # Modify Configuration
         print("Modify Config:")
@@ -271,7 +288,7 @@ class Measurement:
         self.device = dev   # Class object instrument used to read sensors
         self.mlist = []     # List of spectrum windows to be read
         # Assign default configuration
-        self.cfg = Config.cfg_default()
+        self.cfg = Config.cfg_default() #Tracks configuration used for current measurement
     
     # Create list of spectrum windows to be read
     # Note: Resolution is poort if we read the entire spectrum at once. 
@@ -283,7 +300,7 @@ class Measurement:
         nmeas = int(totpoints / self.cfg['sweeppoints'] + 0.999)
         subspan = int(span / nmeas)
         
-        # List of windows
+        # Clear list of windows
         self.mlist = [] 
         
         fs = self.cfg['fstart']
@@ -303,23 +320,20 @@ class Measurement:
     def measure(self):
         # Clear data buffer
         self.data = []
-
-        for k,v in self.cfg.items():    #????????????????????????????????
-            if v != None:
-                self[k] = v
+        self.create()
 
         for m in self.mlist:
-            self['fstart'] = m[0]
-            self['fstop'] = m[1]            
-            self['tracemode'] = self.cfg['tracemode']            
-            sweeptime = self.cmd('sweeptime','?')            
-            self['initiate'] = 1            
+            self.cfg['fstart'] = m[0]       # Start recording from current window start frequency
+            self.cfg['fstop'] = m[1]            # End recording at next window start frequency
+            #self['tracemode'] = self.cfg['tracemode']            
+            sweeptime = self.device.cmd('sweeptime','?')            
+            self.cfg['initiate'] = 1            
             print('st = ', sweeptime)
             print ('sleeping ', sweeptime * self.cfg['sweepcount'] + 1, 's')
             time.sleep(sweeptime * self.cfg['sweepcount'] + 1)
-            while(self.cmd('sweepcountcurrent','?') != self.cfg['sweepcount']):
+            while(self.device.cmd('sweepcountcurrent','?') != self.cfg['sweepcount']):
                 time.sleep(sweeptime * self.cfg['sweepcount'] + 1)
-            self.data.extend(self.cmd('tracedata',1))
+            self.data.extend(self.device.cmd('tracedata',1))
         
         self.setdatafreq()
 
@@ -418,7 +432,7 @@ def plot(data, datax, notes = "", savefile = "Plot", ref=None, peaklist = None):
     #plt.ylim((0,60))
     plt.tight_layout()
     plt.grid()
-    plt.savefig(f'{savefile}.png')
+    #plt.savefig(f'{savefile}.png')
     plt.show()
 
     
@@ -472,10 +486,12 @@ def list_json_files():
 
 # API's
 def meas_instr():
-    #dev = DSA832()
-    Session("dev", "Test", input("Test Description:")).begin()
+    dev = DSA832()
+    Session(dev, "Test", input("Test Description:")).begin()
 
 def meas_plot():
     files = list_json_files()
     selection = int(input("Select file to plot: "))
     plot_measured(files[selection])
+
+meas_instr()

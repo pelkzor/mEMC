@@ -3,6 +3,9 @@ import json
 import time
 
 
+# FOR DEBUGGING ONLY
+import pdb;
+
 from instrument_abstract import Instrument
 
 '''
@@ -36,7 +39,6 @@ class DSA832(Instrument):
 
     # prepares cmd ascii message to be sent to device
     def cmd(self, cmd, arg1 = None, arg2 = None):
-        
         # Check if command given is part of list of valid
         # commands loaded from file
         if not cmd in self.inst:
@@ -109,7 +111,7 @@ class DSA832(Instrument):
         for i in range(2):
             self.data = b'' 
             try:
-                d = self.sock.recv(2048)
+                d = self.sock.recv(12000)
                 # Check if any data was received 
                 if len(d):
                     self.data = self.data + d
@@ -120,7 +122,7 @@ class DSA832(Instrument):
                 print(e)
                 time.sleep(2)
         
-    # Format trace data
+    # Format trace data from raw to floats
     def processtrace(self, data) -> float:
         v = data.split(',')
         v[0] = v[0].split()[1]
