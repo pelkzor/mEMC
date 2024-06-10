@@ -79,17 +79,22 @@ class Session:
         curr_time = datetime.now()
         start_time = curr_time.strftime("%H%M%S")
         date = curr_time.strftime("%Y%m%d")
+                
+        # Create a save folder
+        save_folder = "Measurements"
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
 
-        # Create save folder
-        session_folder = self.create_folders(date, start_time)
         
-        # If no name was provided for the savefile, assign current time
-        if self.savefilename != "":
-            #self.savefilename = f'{session_folder}/{self.savefilename}_{start_time}'
-            self.savefilename = f'{session_folder}/{self.savefilename}'
+        # Append time and date to save file name
+        # If no name given, append "Record"
+        if self.savefilename == "":
+            self.savefilename = f'Record_{date}_{start_time}'
         else:
-            #self.savefilename = f'{session_folder}/{start_time}'
-            self.savefilename = f'{session_folder}/Record'
+            self.savefilename = f'{self.savefilename}_{date}_{start_time}'
+
+        # Append directory to file name
+        self.savefilename = f'{save_folder}/{self.savefilename}'
 
         self.parent_dict["Date Created"] = date
         self.parent_dict["File Name"] = self.savefilename
@@ -166,22 +171,6 @@ class Session:
         file = f'{file}.json'
         with open(file, mode = "w") as f:
             json.dump(self.parent_dict, f, indent=4)
-
-    # Create folders to save data in
-    def create_folders(self, date, start_time):
-        
-        # Create a save folder
-        save_folder = "Measurements"
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
-
-        # Create a sessions folder
-        session_folder =  f'{save_folder}/session_{date}_{start_time}' 
-        if not os.path.exists(session_folder):
-            os.makedirs(session_folder)
-
-        return session_folder
-
 
 
 '''
@@ -486,8 +475,8 @@ def list_json_files():
 
 # API's
 def meas_instr():
-    dev = DSA832()
-    Session(dev, "Test", input("Test Description:")).begin()
+    dev = DSA832()      # Create device object
+    Session(dev, input("Savefile Name: "), input("Test Description:")).begin()
 
 def meas_plot():
     files = list_json_files()
