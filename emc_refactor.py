@@ -507,4 +507,4 @@ def meas_plot():
     selection = int(input("Select file to plot: "))
     plot_measured(files[selection])
 
-meas_instr()
+#meas_instr()
