@@ -3,56 +3,24 @@ from ttkbootstrap.constants import *
 import json     # Import json module
 import os       # For directory manipulation
 from tkinter import scrolledtext        # Import tkinter module for scroll text box
-from tkinter import ttk
 from tkinter import *                   # Import all tkinter modules
+from tkinter import filedialog
 
-import emc_refactor
+import emc_refactor as emc
 
 '''Global Variables'''
 settings_dir_path = ".settings"   # Saves the folder and file to store settings in
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
 
-sizex = 1490
-sizey = 600
 
-'''
-Frame Position values (y,x coordinate in main window)
-'''
-pos_directory_frame     = 0,0
-pos_json_frame          = 0,1
-pos_measurement_frame   = 1,1
-pos_buttons_frame       = 2,1
-pos_selection_frame     = 3,1
-pos_buf_frame           = 0,2
-
-'''
-Widget Positions
-'''
-pos_session_label           = 0,0
-pos_session_scrollbox       = 0,1
-
-pos_measurement_label       = 0,0
-pos_measurement_scrollbox   = 0,1
-
-pos_selection_label         = 0,0
-pos_selection_scrollbox     = 0,1
-
-pos_empty_label         = 0,0
-pos_moveright_button    = 0,1
-pos_moveleft_button     = 0,2
-pos_plot_button         = 0,3
-
-pos_directory_entrybox  = 0,0
-pos_directory_button    = 1,0    
-pos_metadata_scrollbox  = 0,1
-
-theme = {                # Dictionary of possible themes (Refer to ttkbootstrap manpage)
+# Dictionary of possible themes (Refer to ttkbootstrap manpage)
+theme = {                
         "default"   : "superhero",
         "dark"      : "darkly",
         "light"     : "journal"
         }
 
-'''Object Definitions'''
+
 '''
 Function Description: Define a frame for the UI objects
 
@@ -235,6 +203,29 @@ def define_radiobutton(container, position_y, position_x, text = '', status_vari
     return radiobutton
 
 
+'''
+Function Description: Create a custom menu bar with options
+
+Parameters: None
+
+Return: Instance of menubar
+'''
+def create_menubar(window):
+
+    # Create a new menu bar
+    menu_bar = Menu(window)
+    window.config(menu=menu_bar)
+
+    # Create sub menus
+    theme_menu = Menu(menu_bar)
+
+    menu_bar.add_cascade(label="Theme", menu=theme_menu)
+    theme_menu.add_command(label="Default", command=lambda: set_theme(theme["default"]))
+    theme_menu.add_command(label="Dark", command=lambda: set_theme(theme["dark"]))
+    theme_menu.add_command(label="Light", command=lambda: set_theme(theme["light"]))
+
+    return menu_bar
+
 
 '''
 Theme Functions
@@ -268,7 +259,7 @@ Parameters: term_theme - Theme name
 
 Return: None
 '''
-def set_theme(term_theme = None):
+def set_theme(window, term_theme = None):
 
     if term_theme == None:
         # Load theme from the saved file
@@ -310,137 +301,181 @@ def load_theme():
     return saved_theme
 
 
-'''
-Function Description: Create a custom menu bar with options
+# Generates a session plot window as a separate process. terminate current process
+class plot_session():
 
-Parameters: None
+    # Generates new window
+    def __init__(self):
+        # Init class variables
+        self.window = None              # Parent window
+        self.entry_directory = None     # folder directory textbox
+        self.button_directory = None    # Folder search button
+        self.scroll_json = None         # Scroll box for session jason files
+        self.scroll_measurement = None  # Scroll box for measurements in each jason file
+        self.button_moveright = None    # Button to select measurements 
+        self.button_moveleft = None     # Butto to deselect measurements
+        self.button_plot = None         # Plot selected measurements
+        self.scroll_selection = None    # Scroll box for measurements selected 
+        
+        self.curr_directory = os.getcwd()   # Get current directory
 
-Return: Instance of menubar
-'''
-def create_menubar():
+        # Parent window size
+        sizex = 1490
+        sizey = 600
 
-    # Create a new menu bar
-    menu_bar = Menu(window)
-    window.config(menu=menu_bar)
+        '''
+        Frame Definitions
+        '''
+        # Generate GUI window
+        self.window = ttk_b.Window(themename = theme["default"])
+        # Define window size
+        self.window.geometry(str(sizex) + 'x' + str(sizey))
+        # Set title for window
+        self.window.title("EMC_Sessions_Plots")
+        # Ensure display frame expands with window
+        self.window.columnconfigure(0, weight=1)
+        self.window.columnconfigure(1, weight=1)
+        self.window.columnconfigure(3, weight=1)
+        self.window.rowconfigure(1, weight=1)
 
-    # Create sub menus
-    theme_menu = Menu(menu_bar)
+        # Create a menu Bar
+        create_menubar(self.window)
+        # Set previously saved theme
+        set_theme(self.window)
+        # Create framework
+        self.create_frames()
+        
+        # load current directory in textbox
+        self.entry_directory.insert(END,self.curr_directory)
 
-    menu_bar.add_cascade(label="Theme", menu=theme_menu)
-    theme_menu.add_command(label="Default", command=lambda: set_theme(theme["default"]))
-    theme_menu.add_command(label="Dark", command=lambda: set_theme(theme["dark"]))
-    theme_menu.add_command(label="Light", command=lambda: set_theme(theme["light"]))
+        '''
+        Main loop
+        '''
+        self.window.mainloop()
 
-    return menu_bar
-
-
-'''
-Function Description: Generate required frames
-
-Parameters: None
-
-Return: None
-'''
-def create_frames():
-    # Define parent directory frame at the top
-    frame_directory = define_frame(window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
-    # Add some spacing
-    frame_directory.grid(padx=5, pady=5)
-    # Ensure the box expands with the frame in the x axis
-    frame_directory.columnconfigure(0, weight=1)
-    frame_directory.rowconfigure(0, weight=1)
-    # Ensure the frame expands across all columns
-    frame_directory.grid(columnspan=4)
-
-    # define Json file list on the left
-    frame_json = define_frame(window, pos_json_frame[0], pos_json_frame[1], NSEW)
-    # Add some spacing
-    frame_json.grid(padx=5, pady=5)
-    # Ensure the box expands with the frame in x,y axis
-    frame_json.columnconfigure(0, weight=1)
-    frame_json.rowconfigure(1, weight=1)
     
-    # define measurement in selected json file on the right of above
-    frame_measurement = define_frame(window, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
-    # Add some spacing
-    frame_measurement.grid(padx=5, pady=5)
-    # Ensure the box expands with the frame in x,y axis
-    frame_measurement.columnconfigure(0, weight=1)
-    frame_measurement.rowconfigure(1, weight=1)
+    '''
+    Function Descriptiion: return new directory selected by user
+    '''
+    def update_directory(self):
+        self.curr_directory = filedialog.askdirectory()
+        # load current directory in textbox
+        self.entry_directory.delete("0", END)
+        self.entry_directory.insert(END, self.curr_directory)
+    
+    '''
+    Function Description: Generate required frames
 
-    # define buttons frame on right of above (Select, Clear, Plot)
-    frame_buttons = define_frame(window, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
-    # Add some spacing
-    frame_buttons.grid(padx=5, pady=5)
+    Parameters: None
 
-    # define final selection frame on the right of above
-    frame_selection = define_frame(window, pos_selection_frame[0], pos_selection_frame[1], NSEW)
-    # Add some spacing
-    frame_selection.grid(padx=5, pady=5)
-    # Ensure the box expands with the frame in the x,y axis
-    frame_selection.columnconfigure(0, weight=1)
-    frame_selection.rowconfigure(1, weight=1)
+    Return: None
+    '''
+    def create_frames(self):
+        
+        '''
+        Frame Position values (y,x coordinate in main window)
+        '''
+        pos_directory_frame     = 0,0
+        pos_json_frame          = 0,1
+        pos_measurement_frame   = 1,1
+        pos_buttons_frame       = 2,1
+        pos_selection_frame     = 3,1
+        pos_buf_frame           = 0,2
 
-    # Define lower buffer frame at bottom
-    frame_buf = define_frame(window, pos_buf_frame[0], pos_buf_frame[1], S)
-    # Add some spacing
-    frame_buf.grid(padx=5, pady=5)
-    # Ensure the frame expands across all columns
-    frame_buf.grid(columnspan=4)
+        '''
+        Widget Positions
+        '''
+        pos_session_label           = 0,0
+        pos_session_scrollbox       = 0,1
 
-    # Generate Widgets for each frame
-    '''frame_directory widgets'''
-    # Create scroll box for folder directory
-    entry_directory = define_entry_textbox(frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
-    button_directory = define_button(frame_directory, pos_directory_button[0], pos_directory_button[1], "Folder")
-    entry_metadata = define_scroll_textbox(frame_directory, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=5, sticky=NSEW)
+        pos_measurement_label       = 0,0
+        pos_measurement_scrollbox   = 0,1
 
-    '''frame_json widgets'''
-    # Create scroll box for folder directory
-    label_json = define_label(frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
-    scroll_json = define_scroll_textbox(frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
+        pos_selection_label         = 0,0
+        pos_selection_scrollbox     = 0,1
 
-    '''frame_measurement widgets'''
-    label_measurement = define_label(frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
-    scroll_measurement = define_scroll_textbox(frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], width=10, 
-                                               height=10, sticky=NSEW)
+        pos_empty_label             = 0,0
+        pos_moveright_button        = 0,1
+        pos_moveleft_button         = 0,2
+        pos_plot_button             = 0,3
 
-    '''frame_buttons widgets'''
-    label_empty = define_label(frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
-    button_moveright = define_button(frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", sticky=NSEW)
-    button_moveleft  = define_button(frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", sticky=NSEW)
-    button_plot =    define_button(frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", sticky=NSEW)
+        pos_directory_entrybox      = 0,0
+        pos_directory_button        = 1,0    
+        pos_metadata_scrollbox      = 0,1
 
-    '''frame_selection widgets'''
-    label_selection = define_label(frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
-    scroll_selection = define_scroll_textbox(frame_selection, pos_selection_scrollbox[0], pos_selection_scrollbox[1], width=10, height=10, sticky=NSEW)
 
-'''
-Frame Definitions
-'''
-# Generate GUI window
-window = ttk_b.Window(themename = theme["default"])
-# Define window size
-window.geometry(str(sizex) + 'x' + str(sizey))
-# Set title for window
-window.title("EMC_Sessions_Plots")
-# Ensure display frame expands with window
-window.columnconfigure(0, weight=1)
-window.columnconfigure(1, weight=1)
-window.columnconfigure(3, weight=1)
-window.rowconfigure(1, weight=1)
+        # Define parent directory frame at the top
+        frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
+        # Add some spacing
+        frame_directory.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        frame_directory.columnconfigure(0, weight=1)
+        frame_directory.rowconfigure(0, weight=1)
+        # Ensure the frame expands across all columns
+        frame_directory.grid(columnspan=4)
 
-# Create a menu Bar
-menu_bar = create_menubar()
-# Set previously saved theme
-set_theme()
-# Create framework
-create_frames()
+        # define Json file list on the left
+        frame_json = define_frame(self.window, pos_json_frame[0], pos_json_frame[1], NSEW)
+        # Add some spacing
+        frame_json.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in x,y axis
+        frame_json.columnconfigure(0, weight=1)
+        frame_json.rowconfigure(1, weight=1)
+        
+        # define measurement in selected json file on the right of above
+        frame_measurement = define_frame(self.window, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
+        # Add some spacing
+        frame_measurement.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in x,y axis
+        frame_measurement.columnconfigure(0, weight=1)
+        frame_measurement.rowconfigure(1, weight=1)
 
-# Bind Enter key to plot button
-# window.bind("<Return>", )
+        # define buttons frame on right of above (Select, Clear, Plot)
+        frame_buttons = define_frame(self.window, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
+        # Add some spacing
+        frame_buttons.grid(padx=5, pady=5)
 
-'''
-Main loop
-'''
-window.mainloop()
+        # define final selection frame on the right of above
+        frame_selection = define_frame(self.window, pos_selection_frame[0], pos_selection_frame[1], NSEW)
+        # Add some spacing
+        frame_selection.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x,y axis
+        frame_selection.columnconfigure(0, weight=1)
+        frame_selection.rowconfigure(1, weight=1)
+
+        # Define lower buffer frame at bottom
+        frame_buf = define_frame(self.window, pos_buf_frame[0], pos_buf_frame[1], S)
+        # Add some spacing
+        frame_buf.grid(padx=5, pady=5)
+        # Ensure the frame expands across all columns
+        frame_buf.grid(columnspan=4)
+
+        # Generate Widgets for each frame
+        '''frame_directory widgets'''
+        # Create scroll box for folder directory
+        self.entry_directory = define_entry_textbox(frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
+        self.button_directory = define_button(frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
+        self.entry_metadata = define_scroll_textbox(frame_directory, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=5, sticky=NSEW)
+
+        '''frame_json widgets'''
+        # Create scroll box for folder directory
+        label_json = define_label(frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
+        self.scroll_json = define_scroll_textbox(frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
+
+        '''frame_measurement widgets'''
+        label_measurement = define_label(frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
+        self.scroll_measurement = define_scroll_textbox(frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], width=10, 
+                                                height=10, sticky=NSEW)
+
+        '''frame_buttons widgets'''
+        label_empty = define_label(frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
+        self.button_moveright = define_button(frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", sticky=NSEW)
+        self.button_moveleft  = define_button(frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", sticky=NSEW)
+        self.button_plot =    define_button(frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", sticky=NSEW)
+
+        '''frame_selection widgets'''
+        label_selection = define_label(frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
+        self.scroll_selection = define_scroll_textbox(frame_selection, pos_selection_scrollbox[0], pos_selection_scrollbox[1], width=10, height=10, sticky=NSEW)
+
+
+plot_session()
