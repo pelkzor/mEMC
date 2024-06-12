@@ -326,12 +326,13 @@ class plot_session():
         self.button_moveright = None    # Button to select measurements 
         self.button_moveleft = None     # Button to deselect measurements
         self.button_plot = None         # Plot selected measurements
-        self.scroll_selection = None    # Scroll box for measurements selected 
+        self.selection_tree = None      # Tree for measurements selected 
         
         self.curr_directory = os.getcwd()   # Get current directory
 
         self.json_files = {}    # Dictionary of filenames and paths
         self.selected_json_data = {}   # Dictionary of current select json file data
+        self.selected_measurement = {}    # Dictionary of selected measurement data from selected json file
 
         # Parent window size
         sizex = 1490
@@ -425,7 +426,9 @@ class plot_session():
         self.entry_metadata.insert(END, f'Description: \t\t{self.selected_json_data["Description"]}\n')
 
         # Update measurements tree with measurement from selected json
-       
+        # Clear json tree
+        for item in self.tree_measurement.get_children():
+            self.tree_measurement.delete(item) 
         # Iterate through the json file for each measure keyword until none are left
         for i in range(100):
             measure_key = f"measure{i}"
@@ -447,8 +450,59 @@ class plot_session():
             '''
 
     def measurement_selected(self, event):
+        # Get list of items selected
+        selected_items = self.tree_measurement.selection()
+        # Check if no item selected
+        if not selected_items:
+            return
+        
+        # Store first selected item
+        selected_item = self.tree_measurement.item(selected_items[0])["values"][0]
+        # Deselect all other items. Ensure only 1 item can be selected
+        for item in self.tree_measurement.get_children():
+            if item != selected_item:
+                self.tree_measurement.selection_remove(item)
+
+        # Temporarily save measurement data
+        self.selected_measurement = self.selected_json_data[selected_item]
+        # Append the name of measurement to dictionary
+        self.selected_measurement["Name"] = selected_item
+
+        # Update Metadata box
+        self.entry_metadata.delete("1.0",END)
+        self.entry_metadata.insert(END, f'Time Stamp: \t\t{self.selected_measurement["TimeStamp"]}\n')
+        self.entry_metadata.insert(END, f'Configuration: \t\t{self.selected_measurement["Configuration"]}\n')
+        self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement["Note"]}\n')
+
+        
+    def rb_pressed(self):
+        
+        # List measurement selected on selection tree
+        self.tree_selection.insert('',END, values=self.selected_measurement["Name"])
+
+        # Add measurement data to plotting dictionary
+
         pass
 
+    def lb_pressed(self):
+
+        # Delete measurement selected in selection tree
+
+        # Remove measurement data to plotting dictionary
+
+        pass
+
+    def pltb_pressed(self):
+
+        # plot plotting dictionary
+        
+        pass
+
+    def clrb_pressed(self):
+
+        # Clear selection tree
+        for item in self.tree_selection.get_children():
+            self.tree_selection.delete(item) 
 
     '''
     Function Description: Generate required frames
@@ -535,18 +589,19 @@ class plot_session():
         Widget Positions (y,x coordinate in main window)
         '''
         pos_session_label           = 0,0
-        pos_session_scrollbox       = 0,1
+        pos_session_tree            = 0,1
 
         pos_measurement_label       = 0,0
-        pos_measurement_scrollbox   = 0,1
+        pos_measurement_tree        = 0,1
 
         pos_selection_label         = 0,0
-        pos_selection_scrollbox     = 0,1
+        pos_selection_tree          = 0,1
 
         pos_empty_label             = 0,0
         pos_moveright_button        = 0,1
         pos_moveleft_button         = 0,2
         pos_plot_button             = 0,3
+        pos_clear_button            = 0,4
 
         pos_directory_entrybox      = 0,0
         pos_directory_button        = 1,0    
@@ -555,36 +610,34 @@ class plot_session():
     
         # Generate Widgets for each frame and assign functions as required
         '''frame_directory widgets'''
-        # Create scroll box for folder directory
         self.entry_directory = define_entry_textbox(self.frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
         self.button_directory = define_button(self.frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
 
         '''frame_metadata widgets'''
-        # create scroll box for metadata
         self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=3, sticky=NSEW)
 
         '''frame_json widgets'''
-        # Create scroll box for folder directory
-        label_json = define_label(self.frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
-        #self.scroll_json = define_scroll_textbox(self.frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
-        self.tree_json = define_treeview(self.frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], sticky=NSEW)
+        define_label(self.frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
+        self.tree_json = define_treeview(self.frame_json, pos_session_tree[0], pos_session_tree[1], sticky=NSEW)
         self.tree_json.config(columns=('Filename'))
         self.tree_json.bind('<<TreeviewSelect>>', self.json_selected)
 
         '''frame_measurement widgets'''
-        label_measurement = define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
-        self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], sticky=NSEW)
+        define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
+        self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_tree[0], pos_measurement_tree[1], sticky=NSEW)
         self.tree_measurement.config(columns=('Measurement'))
         self.tree_measurement.bind('<<TreeviewSelect>>', self.measurement_selected)
 
         '''frame_buttons widgets'''
-        label_empty = define_label(self.frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
-        self.button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", sticky=NSEW)
-        self.button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", sticky=NSEW)
-        self.button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", sticky=NSEW)
+        define_label(self.frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
+        self.button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", function_call=self.rb_pressed, sticky=NSEW)
+        self.button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", function_call=self.lb_pressed, sticky=NSEW)
+        self.button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", function_call=self.pltb_pressed, sticky=NSEW)
+        self.button_plot =    define_button(self.frame_buttons, pos_clear_button[0], pos_clear_button[1], "Clear", function_call=self.clrb_pressed, sticky=NSEW)
 
         '''frame_selection widgets'''
-        label_selection = define_label(self.frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
-        self.scroll_selection = define_scroll_textbox(self.frame_selection, pos_selection_scrollbox[0], pos_selection_scrollbox[1], width=10, height=10, sticky=NSEW)
+        define_label(self.frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
+        self.tree_selection = define_treeview(self.frame_selection, pos_selection_tree[0], pos_selection_tree[1], sticky=NSEW)
+        self.tree_selection.config(columns=('Selection'))
 
 plot_session()

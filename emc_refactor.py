@@ -480,8 +480,6 @@ def plot_measured(data_filename):
 def list_json_files(directory = ''):
 
     json_files = []              # list of json dictionaries
-    valid_json_dict = {}         # Stores valid jsons filename and paths
-
     if directory == '':
         # Use glob to find all JSON files in the current folder
         # If no directory is provided
@@ -496,10 +494,8 @@ def list_json_files(directory = ''):
         file_dict = load_sessiondata(file)
         # Search for at least one valid measurement in each json file
         if "measure0" in file_dict:
-            valid_json_dict["filename"] = os.path.basename(file)
-            valid_json_dict["filepath"] = file
             # Append to list of valid json files
-            json_files.append(valid_json_dict)
+            json_files.append({"filename":os.path.basename(file), "filepath": file})
 
     # Print the list of valid JSON files found
     if json_files != None:
