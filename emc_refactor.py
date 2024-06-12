@@ -58,6 +58,7 @@ Desc: Highest abstraction. Calls measurement class. Handles data storage along w
 Para: save file name, object of instrument being used
 return: NA
 '''
+
 class Session:
 
     def __init__ (self, dev, savefilename = "", desc = ""):
@@ -478,34 +479,37 @@ def plot_measured(data_filename):
 
 def list_json_files(directory = ''):
 
-    valid_json_files= []    # list of valid sesison json files
+    json_files = []              # list of json dictionaries
+    valid_json_dict = {}         # Stores valid jsons filename and paths
 
     if directory == '':
         # Use glob to find all JSON files in the current folder
         # If no directory is provided
-        json_files = glob.glob('**/*.json', recursive=True)
+        json_file_paths = glob.glob(os.path.join('.','**/*.json'), recursive=True)
     else:
         # Else find files in given directory / sub directory
-        json_files = glob.glob(os.path.join(directory,'**/*.json'),  recursive=True)
+        json_file_paths = glob.glob(os.path.join(directory,'**/*.json'),  recursive=True)
 
     # Filter out invalid json files
-    for json_file in json_files:
-        # load data
-        file_dict = load_sessiondata(json_file)
+    for file in json_file_paths:
+        # load data from json file
+        file_dict = load_sessiondata(file)
         # Search for at least one valid measurement in each json file
         if "measure0" in file_dict:
-            valid_json_files.append(json_file)
-
+            valid_json_dict["filename"] = os.path.basename(file)
+            valid_json_dict["filepath"] = file
+            # Append to list of valid json files
+            json_files.append(valid_json_dict)
 
     # Print the list of valid JSON files found
-    if valid_json_files != None:
+    if json_files != None:
         print("Found JSON files:")
         count = 0
-        for valid_json_file in valid_json_files:
-            print(f'{count}. {valid_json_file}')
+        for valid_json_file in json_files:
+            print(f'{count}. {valid_json_file.get("filename")}')
             count += 1
-        
-        return valid_json_files
+
+        return json_files
 
     else:
         print("No JSON files found in the folder.")

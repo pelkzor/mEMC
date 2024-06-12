@@ -5,6 +5,7 @@ import os       # For directory manipulation
 from tkinter import scrolledtext        # Import tkinter module for scroll text box
 from tkinter import *                   # Import all tkinter modules
 from tkinter import filedialog
+from tkinter import ttk
 
 import emc_refactor as emc
 
@@ -202,6 +203,16 @@ def define_radiobutton(container, position_y, position_x, text = '', status_vari
 
     return radiobutton
 
+'''
+Note: Refer to https://ttkbootstrap.readthedocs.io/en/version-0.5/widgets/treeview.html
+'''
+
+def define_treeview(container, position_y, position_x, sticky=None):
+
+    tree = ttk.Treeview(container, show='headings')
+    tree.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
+
+    return tree
 
 '''
 Function Description: Create a custom menu bar with options
@@ -310,16 +321,17 @@ class plot_session():
         self.window = None              # Parent window
         self.entry_directory = None     # folder directory textbox
         self.button_directory = None    # Folder search button
-        self.scroll_json = None         # Scroll box for session jason files
-        self.scroll_measurement = None  # Scroll box for measurements in each jason file
+        self.tree_json = None           # tree shows available json files
+        self.tree_measurement = None    # tree for measurements in each jason file
         self.button_moveright = None    # Button to select measurements 
-        self.button_moveleft = None     # Butto to deselect measurements
+        self.button_moveleft = None     # Button to deselect measurements
         self.button_plot = None         # Plot selected measurements
         self.scroll_selection = None    # Scroll box for measurements selected 
         
         self.curr_directory = os.getcwd()   # Get current directory
 
-        self.json_files = []
+        self.json_files = {}    # Dictionary of filenames and paths
+        self.selected_json_data = {}   # Dictionary of current select json file data
 
         # Parent window size
         sizex = 1490
@@ -354,9 +366,9 @@ class plot_session():
         # List all sessions in folder / sub-folders
         self.json_files = emc.list_json_files()
 
-        # Print to sessions scroll box
+        # Print to sessions to tree
         for file in self.json_files:
-            self.scroll_json.insert(END,file)
+            self.tree_json.insert('',END, values= file.get("filename"))
 
         '''
         Main loop
@@ -370,18 +382,74 @@ class plot_session():
     def update_directory(self):
         self.curr_directory = filedialog.askdirectory()
         # load current directory in textbox
-        self.entry_directory.delete("0", END)
+        self.entry_directory.delete(0, END)
         self.entry_directory.insert(END, self.curr_directory)
 
         # List all sessions in folder / sub-folders
         self.json_files = emc.list_json_files(self.curr_directory)
 
-        # Clear scroll box
-        self.scroll_json.delete("1.0", END) 
-        # Print to sessions scroll box
+        # Clear json tree
+        for item in self.tree_json.get_children():
+            self.tree_json.delete(item) 
+        # Print to json tree
         for file in self.json_files:
-            self.scroll_json.insert(END,file)
+            self.tree_json.insert('',END, values=file.get("filename"))
     
+    '''
+    Function: Called when the user selects a json file. Writes 
+                description and measurements list to widgets
+    '''
+    def json_selected(self, event):
+        # Get list of items selected
+        selected_items = self.tree_json.selection()
+        # Check if no item selected
+        if not selected_items:
+            return
+        
+        # Store first selected item
+        selected_item = self.tree_json.item(selected_items[0])["values"][0]
+        # Deselect all other items. Ensure only 1 item can be selected
+        for item in self.tree_json.get_children():
+            if item != selected_item:
+                self.tree_json.selection_remove(item)
+
+        # Load json data
+        for file in self.json_files:
+            if file.get("filename") == selected_item:
+                self.selected_json_data = emc.load_sessiondata(selected_item)
+        
+        # Update metadata field with file name, desription etc
+        self.entry_metadata.delete("1.0",END)
+        self.entry_metadata.insert(END, f'File Name: \t\t{self.selected_json_data["File Name"]}\n')
+        self.entry_metadata.insert(END, f'Date Created: \t\t{self.selected_json_data["Date Created"]}\n')
+        self.entry_metadata.insert(END, f'Description: \t\t{self.selected_json_data["Description"]}\n')
+
+        # Update measurements tree with measurement from selected json
+       
+        # Iterate through the json file for each measure keyword until none are left
+        for i in range(100):
+            measure_key = f"measure{i}"
+            # Search for measurement key in json file
+            measurement = self.selected_json_data.get(measure_key, "Nonexistent")
+            # Return nonexisent keyword if not found
+            if(measurement == "Nonexistent"):
+                # Assume all keys found and listed. Exit
+                break
+            # List on measurement tree
+            self.tree_measurement.insert('',END, values=measure_key)
+            
+            ''' # Access all information and isolate
+            data = measurement["Sig_Level"]
+            datax = measurement["Frequency"]
+            note = measurement["Note"]
+            config = measurement["Configuration"]
+            image_note = f'{note}\nConfig: {config}'
+            '''
+
+    def measurement_selected(self, event):
+        pass
+
+
     '''
     Function Description: Generate required frames
 
@@ -491,19 +559,23 @@ class plot_session():
         self.entry_directory = define_entry_textbox(self.frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
         self.button_directory = define_button(self.frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
 
-        '''frame_metadta widgets'''
+        '''frame_metadata widgets'''
         # create scroll box for metadata
-        self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=5, sticky=NSEW)
+        self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=3, sticky=NSEW)
 
         '''frame_json widgets'''
         # Create scroll box for folder directory
         label_json = define_label(self.frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
-        self.scroll_json = define_scroll_textbox(self.frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
+        #self.scroll_json = define_scroll_textbox(self.frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
+        self.tree_json = define_treeview(self.frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], sticky=NSEW)
+        self.tree_json.config(columns=('Filename'))
+        self.tree_json.bind('<<TreeviewSelect>>', self.json_selected)
 
         '''frame_measurement widgets'''
         label_measurement = define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
-        self.scroll_measurement = define_scroll_textbox(self.frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], width=10, 
-                                                height=10, sticky=NSEW)
+        self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], sticky=NSEW)
+        self.tree_measurement.config(columns=('Measurement'))
+        self.tree_measurement.bind('<<TreeviewSelect>>', self.measurement_selected)
 
         '''frame_buttons widgets'''
         label_empty = define_label(self.frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
