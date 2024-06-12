@@ -446,7 +446,7 @@ def plot(data, datax, notes = "", savefile = "Plot", ref=None, peaklist = None):
     plt.tight_layout()
     plt.grid()
     #plt.savefig(f'{savefile}.png')
-    plt.show(block=False)
+    plt.show()
 
     
 # Read measured data, process, print peaks, plot 
@@ -476,26 +476,40 @@ def plot_measured(data_filename):
     data, datax = applycorrection(data, datax, fclist)
     plot(data, datax, image_note)
 
-def list_json_files():
+def list_json_files(directory = ''):
 
-    # Ensure the folder path is correct
-    if not os.path.exists("Measurements"):
-        print(f"Folder Measurements does not exist.")
+    valid_json_files= []    # list of valid sesison json files
+
+    if directory == '':
+        # Use glob to find all JSON files in the current folder
+        # If no directory is provided
+        json_files = glob.glob('**/*.json', recursive=True)
     else:
-        # Use glob to find all JSON files in the folder
-        json_files = glob.glob(os.path.join("Measurements", '**/*.json'))
+        # Else find files in given directory / sub directory
+        json_files = glob.glob(os.path.join(directory,'**/*.json'),  recursive=True)
 
-        # Print the list of JSON files found
-        if json_files:
-            print("Found JSON files:")
-            count = 0
-            for json_file in json_files:
-                print(f'{count}. {json_file}')
-                count += 1
-        else:
-            print("No JSON files found in the folder.")
+    # Filter out invalid json files
+    for json_file in json_files:
+        # load data
+        file_dict = load_sessiondata(json_file)
+        # Search for at least one valid measurement in each json file
+        if "measure0" in file_dict:
+            valid_json_files.append(json_file)
 
-    return json_files
+
+    # Print the list of valid JSON files found
+    if valid_json_files != None:
+        print("Found JSON files:")
+        count = 0
+        for valid_json_file in valid_json_files:
+            print(f'{count}. {valid_json_file}')
+            count += 1
+        
+        return valid_json_files
+
+    else:
+        print("No JSON files found in the folder.")
+
 
 # API's
 def meas_instr():
@@ -507,4 +521,5 @@ def meas_plot():
     selection = int(input("Select file to plot: "))
     plot_measured(files[selection])
 
+#meas_plot()
 #meas_instr()

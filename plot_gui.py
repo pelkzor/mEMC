@@ -145,9 +145,9 @@ position_x - row index for frame position
 
 Return: textbox object
 '''
-def define_scroll_textbox(container, position_y = 0, position_x = 0, width = None, height = None, sticky=None):
+def define_scroll_textbox(container, position_y = 0, position_x = 0, width = None, default_state = "normal", height = None, sticky=None):
 
-    scrollbox = scrolledtext.ScrolledText(container, width=width, height=height, state="disabled")
+    scrollbox = scrolledtext.ScrolledText(container, width=width, height=height, state=default_state)
     scrollbox.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
     scrollbox.configure(font=("Times New Roman", 10))
 
@@ -220,9 +220,9 @@ def create_menubar(window):
     theme_menu = Menu(menu_bar)
 
     menu_bar.add_cascade(label="Theme", menu=theme_menu)
-    theme_menu.add_command(label="Default", command=lambda: set_theme(theme["default"]))
-    theme_menu.add_command(label="Dark", command=lambda: set_theme(theme["dark"]))
-    theme_menu.add_command(label="Light", command=lambda: set_theme(theme["light"]))
+    theme_menu.add_command(label="Default", command=lambda: set_theme(window,theme["default"]))
+    theme_menu.add_command(label="Dark", command=lambda: set_theme(window,theme["dark"]))
+    theme_menu.add_command(label="Light", command=lambda: set_theme(window,theme["light"]))
 
     return menu_bar
 
@@ -319,6 +319,8 @@ class plot_session():
         
         self.curr_directory = os.getcwd()   # Get current directory
 
+        self.json_files = []
+
         # Parent window size
         sizex = 1490
         sizey = 600
@@ -336,7 +338,7 @@ class plot_session():
         self.window.columnconfigure(0, weight=1)
         self.window.columnconfigure(1, weight=1)
         self.window.columnconfigure(3, weight=1)
-        self.window.rowconfigure(1, weight=1)
+        self.window.rowconfigure(2, weight=1)
 
         # Create a menu Bar
         create_menubar(self.window)
@@ -344,9 +346,17 @@ class plot_session():
         set_theme(self.window)
         # Create framework
         self.create_frames()
+        self.create_widgets()
         
         # load current directory in textbox
         self.entry_directory.insert(END,self.curr_directory)
+
+        # List all sessions in folder / sub-folders
+        self.json_files = emc.list_json_files()
+
+        # Print to sessions scroll box
+        for file in self.json_files:
+            self.scroll_json.insert(END,file)
 
         '''
         Main loop
@@ -355,13 +365,22 @@ class plot_session():
 
     
     '''
-    Function Descriptiion: return new directory selected by user
+    Function Description: return new directory selected by user
     '''
     def update_directory(self):
         self.curr_directory = filedialog.askdirectory()
         # load current directory in textbox
         self.entry_directory.delete("0", END)
         self.entry_directory.insert(END, self.curr_directory)
+
+        # List all sessions in folder / sub-folders
+        self.json_files = emc.list_json_files(self.curr_directory)
+
+        # Clear scroll box
+        self.scroll_json.delete("1.0", END) 
+        # Print to sessions scroll box
+        for file in self.json_files:
+            self.scroll_json.insert(END,file)
     
     '''
     Function Description: Generate required frames
@@ -376,14 +395,76 @@ class plot_session():
         Frame Position values (y,x coordinate in main window)
         '''
         pos_directory_frame     = 0,0
-        pos_json_frame          = 0,1
-        pos_measurement_frame   = 1,1
-        pos_buttons_frame       = 2,1
-        pos_selection_frame     = 3,1
-        pos_buf_frame           = 0,2
+        pos_metadata_frame      = 0,1
+        pos_json_frame          = 0,2
+        pos_measurement_frame   = 1,2
+        pos_buttons_frame       = 2,2
+        pos_selection_frame     = 3,2
+        pos_buf_frame           = 0,3
+
+
+        # Define parent directory frame at the top
+        self.frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
+        # Add some spacing
+        self.frame_directory.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_directory.columnconfigure(0, weight=1)
+        self.frame_directory.rowconfigure(0, weight=1)
+        # Ensure the frame expands across all columns
+        self.frame_directory.grid(columnspan=4)
+
+        # Define parent directory frame at the top
+        self.frame_metadata = define_frame(self.window, pos_metadata_frame[0], pos_metadata_frame[1], NSEW)
+        # Add some spacing
+        self.frame_metadata.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_metadata.columnconfigure(0, weight=1)
+        self.frame_metadata.rowconfigure(0, weight=1)
+        # Ensure the frame expands across all columns
+        self.frame_metadata.grid(columnspan=4)
+
+        # define Json file list on the left
+        self.frame_json = define_frame(self.window, pos_json_frame[0], pos_json_frame[1], NSEW)
+        # Add some spacing
+        self.frame_json.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in x,y axis
+        self.frame_json.columnconfigure(0, weight=1)
+        self.frame_json.rowconfigure(1, weight=1)
+        
+        # define measurement in selected json file on the right of above
+        self.frame_measurement = define_frame(self.window, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
+        # Add some spacing
+        self.frame_measurement.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in x,y axis
+        self.frame_measurement.columnconfigure(0, weight=1)
+        self.frame_measurement.rowconfigure(1, weight=1)
+
+        # define buttons frame on right of above (Select, Clear, Plot)
+        self.frame_buttons = define_frame(self.window, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
+        # Add some spacing
+        self.frame_buttons.grid(padx=5, pady=5)
+
+        # define final selection frame on the right of above
+        self.frame_selection = define_frame(self.window, pos_selection_frame[0], pos_selection_frame[1], NSEW)
+        # Add some spacing
+        self.frame_selection.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x,y axis
+        self.frame_selection.columnconfigure(0, weight=1)
+        self.frame_selection.rowconfigure(1, weight=1)
+
+        # Define lower buffer frame at bottom
+        frame_buf = define_frame(self.window, pos_buf_frame[0], pos_buf_frame[1], S)
+        # Add some spacing
+        frame_buf.grid(padx=5, pady=5)
+        # Ensure the frame expands across all columns
+        frame_buf.grid(columnspan=4)
+
+
+
+    def create_widgets(self):
 
         '''
-        Widget Positions
+        Widget Positions (y,x coordinate in main window)
         '''
         pos_session_label           = 0,0
         pos_session_scrollbox       = 0,1
@@ -401,81 +482,37 @@ class plot_session():
 
         pos_directory_entrybox      = 0,0
         pos_directory_button        = 1,0    
-        pos_metadata_scrollbox      = 0,1
 
-
-        # Define parent directory frame at the top
-        frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
-        # Add some spacing
-        frame_directory.grid(padx=5, pady=5)
-        # Ensure the box expands with the frame in the x axis
-        frame_directory.columnconfigure(0, weight=1)
-        frame_directory.rowconfigure(0, weight=1)
-        # Ensure the frame expands across all columns
-        frame_directory.grid(columnspan=4)
-
-        # define Json file list on the left
-        frame_json = define_frame(self.window, pos_json_frame[0], pos_json_frame[1], NSEW)
-        # Add some spacing
-        frame_json.grid(padx=5, pady=5)
-        # Ensure the box expands with the frame in x,y axis
-        frame_json.columnconfigure(0, weight=1)
-        frame_json.rowconfigure(1, weight=1)
-        
-        # define measurement in selected json file on the right of above
-        frame_measurement = define_frame(self.window, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
-        # Add some spacing
-        frame_measurement.grid(padx=5, pady=5)
-        # Ensure the box expands with the frame in x,y axis
-        frame_measurement.columnconfigure(0, weight=1)
-        frame_measurement.rowconfigure(1, weight=1)
-
-        # define buttons frame on right of above (Select, Clear, Plot)
-        frame_buttons = define_frame(self.window, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
-        # Add some spacing
-        frame_buttons.grid(padx=5, pady=5)
-
-        # define final selection frame on the right of above
-        frame_selection = define_frame(self.window, pos_selection_frame[0], pos_selection_frame[1], NSEW)
-        # Add some spacing
-        frame_selection.grid(padx=5, pady=5)
-        # Ensure the box expands with the frame in the x,y axis
-        frame_selection.columnconfigure(0, weight=1)
-        frame_selection.rowconfigure(1, weight=1)
-
-        # Define lower buffer frame at bottom
-        frame_buf = define_frame(self.window, pos_buf_frame[0], pos_buf_frame[1], S)
-        # Add some spacing
-        frame_buf.grid(padx=5, pady=5)
-        # Ensure the frame expands across all columns
-        frame_buf.grid(columnspan=4)
-
-        # Generate Widgets for each frame
+        pos_metadata_scrollbox      = 0,0
+    
+        # Generate Widgets for each frame and assign functions as required
         '''frame_directory widgets'''
         # Create scroll box for folder directory
-        self.entry_directory = define_entry_textbox(frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
-        self.button_directory = define_button(frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
-        self.entry_metadata = define_scroll_textbox(frame_directory, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=5, sticky=NSEW)
+        self.entry_directory = define_entry_textbox(self.frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
+        self.button_directory = define_button(self.frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
+
+        '''frame_metadta widgets'''
+        # create scroll box for metadata
+        self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=5, sticky=NSEW)
 
         '''frame_json widgets'''
         # Create scroll box for folder directory
-        label_json = define_label(frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
-        self.scroll_json = define_scroll_textbox(frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
+        label_json = define_label(self.frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
+        self.scroll_json = define_scroll_textbox(self.frame_json, pos_session_scrollbox[0], pos_session_scrollbox[1], width=10, height=10, sticky=NSEW)
 
         '''frame_measurement widgets'''
-        label_measurement = define_label(frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
-        self.scroll_measurement = define_scroll_textbox(frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], width=10, 
+        label_measurement = define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
+        self.scroll_measurement = define_scroll_textbox(self.frame_measurement, pos_measurement_scrollbox[0], pos_measurement_scrollbox[1], width=10, 
                                                 height=10, sticky=NSEW)
 
         '''frame_buttons widgets'''
-        label_empty = define_label(frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
-        self.button_moveright = define_button(frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", sticky=NSEW)
-        self.button_moveleft  = define_button(frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", sticky=NSEW)
-        self.button_plot =    define_button(frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", sticky=NSEW)
+        label_empty = define_label(self.frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
+        self.button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", sticky=NSEW)
+        self.button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", sticky=NSEW)
+        self.button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", sticky=NSEW)
 
         '''frame_selection widgets'''
-        label_selection = define_label(frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
-        self.scroll_selection = define_scroll_textbox(frame_selection, pos_selection_scrollbox[0], pos_selection_scrollbox[1], width=10, height=10, sticky=NSEW)
-
+        label_selection = define_label(self.frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
+        self.scroll_selection = define_scroll_textbox(self.frame_selection, pos_selection_scrollbox[0], pos_selection_scrollbox[1], width=10, height=10, sticky=NSEW)
 
 plot_session()
