@@ -1,537 +1,466 @@
-import socket
-import json
-import time
-from matplotlib import pyplot as plt
-from matplotlib import ticker
-#import mplcursors
-
-from itertools import groupby
 import numpy as np
+from matplotlib import pyplot as plt
+import time
+from datetime import datetime
+import json
+import os
+import glob
 
-#cfg = {'rbw':None, 'vbw':None, 'amp':0, 'atten':1, 'detector':'POSitive'
 
-class Config:
-    pass
+from DSA832_instrument import DSA832
 
-def cfg_condqp():   #conducted emf by cable - quasi filter
-    return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 'fstop':30000000, 'sweeptime': 15, 'rbw':9000, 'vbw':9000, 'amp':0, 'atten':0, 'detector':'QPEak', 'emifilter':1, 'sweeppoints':601, 'sweepcount':1, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}
+'''
+Author: Shawn Nagar
+Date: 03/06/2024
+'''
 
-def cfg_cond2():    #generic cibduced emf
-    return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':1, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}        
+'''
+Desc: Highest abstraction. Calls measurement class. Handles data storage along with notes by user
+Para: save file name, object of instrument being used
+return: NA
+'''
+
+class Session:
+
+    def __init__ (self, dev, savefilename = "", desc = ""):
+        self.savefilename = savefilename
+        self.session_desc = desc        # description of session to be added to file
+        self.meas = Measurement(dev)    # Class object of measurement to be used
+        self.fclist = loadcorrection('tbaf1m.csv')      # Load correction info
+
+        # Parent dictionary. Contains filename, data of creation, description
+        # and list of measurements
+        self.parent_dict = {}
+
+
+    # Creates save folder if not already existing
+    # Saves session metadata in dictionary
+    def begin (self):
+
+        # Append date and time to given folder and file name
+        curr_time = datetime.now()
+        start_time = curr_time.strftime("%H%M%S")
+        date = curr_time.strftime("%Y%m%d")
+                
+        # Create a save folder
+        save_folder = "Measurements"
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+
+        
+        # Append time and date to save file name
+        # If no name given, append "Record"
+        if self.savefilename == "":
+            self.savefilename = f'Record_{date}_{start_time}'
+        else:
+            self.savefilename = f'{self.savefilename}_{date}_{start_time}'
+
+        # Append directory to file name
+        self.savefilename = f'{save_folder}/{self.savefilename}'
+
+        self.parent_dict["Date Created"] = date
+        self.parent_dict["File Name"] = self.savefilename
+        self.parent_dict["Description"] = self.session_desc
+
+        # Start collecting data
+        measure_count = 0
+        while(1):
+            self.measure(measure_count)
+            # Increment measurement counter
+            measure_count += 1
+
+    # Iterate 1 measurement
+    def measure(self,count):
+        curr_time = datetime.now()
+        logtime = curr_time.strftime("%H%M%S")
+        # Initalise dictionary for current measurement 
+        measure_dict = {}
+        measure_dict["TimeStamp"] = logtime
+        measure_dict["Configuration"] = self.meas.cfg
+
+        # request notes and save
+        note = input("Write Note Now: ")
+        measure_dict["Note"] = note
+
+        # Clear buffers
+        data = []      
+        datax = []
+        
+
+        # Read data
+        data, datax = self.meas.measure()
+        # Apply corrections
+        data, datax = applycorrection(data, datax, self.fclist)
+        
     
-def cfg_cond1():    #generic condiced emf
-    return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}
+        '''# TESTING. Loads data from a previous json recording. Simulating reading
+        # Data from actual instrument as above
+        diction = load_sessiondata("session_test.json")["measure0"]
+        data = diction["Sig_Level"]
+        datax = diction['Frequency']
+        data, datax = applycorrection(data, datax, self.fclist)
+        '''
 
-def cfg_rad1():     #datiation emmission
-    return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 'fstop':1000000000, 'sweeptime': 0.2, 'rbw':120000, 'vbw':120000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
+        # Save data to dictionary
+        measure_dict["Sig_Level"] = data
+        measure_dict["Frequency"] = datax
 
-def cfg_radcoarse():    #Less resolution
-    return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 'fstop':1000000000, 'sweeptime': 0.2, 'rbw':1000000, 'vbw':1000000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
+        # Append to Parent dictionary
+        self.parent_dict["measure" + str(count)] = measure_dict
 
-def cfg_mt100():        #Specifc to measurement transformer
-    return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':150000, 'fstop':100000000, 'sweeptime': 0.2, 'rbw':9000, 'vbw':9000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
+        # Save current parent dictionary to file
+        self.savedata(f'{self.savefilename}') 
 
+        # Generate plot
+        plot(data, datax, note, f'{self.savefilename}_measure_{count}')
+
+        # Modify Configuration
+        print("Modify Config:")
+        print("0. No change")
+        print("1. Default\n2. Condqp - Conducted emf w/ quasi filter")
+        print("3. Cond1 - Conducted emf (Generic)")
+        print("4. Cond2 - Conducted emf (Generic)")
+        print("5. Rad1 - Radiation emmission")
+        print("6. Radcoarse - Radition Emmission (Coarse)")
+        print("7. Mt100 - Measurement transformer specific")
+        config_opt = int(input())
+        # only call config change methods if default option is not selected
+        if(config_opt > 0):
+            self.meas.update_config(config_opt)
+
+    # save dictionary to file
+    def savedata(self, file):
+        file = f'{file}.json'
+        with open(file, mode = "w") as f:
+            json.dump(self.parent_dict, f, indent=4)
+
+
+'''
+Desc:   Class contains different configurations for reading data from device
+'''
+class Config:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    # return correct configuration based on number provided
+    def get_config(cls, opt: int):
+        # Dictionary associating options provided with configuration methods
+        configs = {1: Config.cfg_default,
+                2: Config.cfg_condqp,
+                3: Config.cfg_cond1,
+                4: Config.cfg_cond2,
+                5: Config.cfg_rad1,
+                6: Config.cfg_radcoarse,
+                7: Config.cfg_mt100}
+        
+        # Use default config if an invalid option was provided
+        if opt <= 0 or opt > len(configs):
+            print("Invalid Option: Default config applied")
+            opt = 1
+
+        # return correct method
+        config_func = configs.get(opt)
+
+        # Return configuration dictionary
+        return config_func()
+
+
+    @classmethod
+    def cfg_default(cls):
+        return {'continuous':0, 'fstart':30000000, 
+                'fstop':1000000000, 'rbw':120000, 'vbw':1000000, 
+                'amp':1, 'atten':0, 'detector':'POSitive', 
+                'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 
+                'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0, 'step':None}
+
+    @classmethod
+    def cfg_condqp(cls):   # conducted emf by cable - quasi filter
+        return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 
+                'fstop':30000000, 'sweeptime': 15, 'rbw':9000, 'vbw':9000, 
+                'amp':0, 'atten':0, 'detector':'QPEak', 'emifilter':1, 
+                'sweeppoints':601, 'sweepcount':1, 'tracemode':'MAXHold', 
+                'unit':'dBuV', 'offset':10}
+
+    @classmethod
+    def cfg_cond2(cls):    # generic conducted emf
+        return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 
+                'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 
+                'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 
+                'emifilter':1, 'sweeppoints':601, 'sweepcount':1, 
+                'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}        
+        
+    @classmethod
+    def cfg_cond1(cls):    # generic conducted emf
+        return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 
+                'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 
+                'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 
+                'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 
+                'tracemode':'MAXHold', 'unit':'dBuV', 'offset':10}
+
+    @classmethod
+    def cfg_rad1(cls):     # radiation emmission
+        return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 
+                'fstop':1000000000, 'sweeptime': 0.2, 'rbw':120000, 'vbw':120000, 
+                'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 
+                'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 
+                'unit':'dBuV', 'offset':0}
+
+    @classmethod
+    def cfg_radcoarse(cls):    # radiation emmission Less resolution
+        return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 
+                'fstop':1000000000, 'sweeptime': 0.2, 'rbw':1000000, 'vbw':1000000, 
+                'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 
+                'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 
+                'unit':'dBuV', 'offset':0}
+
+    @classmethod
+    def cfg_mt100(cls):        # Specifc to measurement transformer
+        return {'continuous':0, 'xscale':'LIN', 'offset': 0, 
+                'fstart':150000, 'fstop':100000000, 'sweeptime': 0.2, 
+                'rbw':9000, 'vbw':9000, 'amp':1, 'atten':0, 'detector':'POSitive', 
+                'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 
+                'unit':'dBuV', 'offset':0}
+
+
+''' 
+Desc:   Class works independent of device being used. Methods request data from instrument. 
+        Data storage, manipulation and graphing implemented here.
+Para:   Instrument Object
+Return: NA
+'''
 class Measurement:
 
-    def __init__(self, filename=None, descr=''):
-        
-        self.description=descr
-        if type(filename) is str:
-            self.loaddata(filename)
-            if len(self.description) == 0:
-                self.description = filename
-        else:
-            self.data = []
-            
-        self.cfg = {'continuous':0, 'fstart':30000000, 'fstop':1000000000, 'rbw':120000, 'vbw':1000000, 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0, 'step':None}
-
+    # Initialise instrument object here
+    def __init__(self, dev):
+        self.data = []      # Stores raw measured data (Y-axis)
+        self.datax = []     # Stores raw measured data (X-axis)
+        self.device = dev   # Class object instrument used to read sensors
+        self.mlist = []     # List of spectrum windows to be read
+        # Assign default configuration
+        self.cfg = Config.cfg_default() #Tracks configuration used for current measurement
     
+    # Create list of spectrum windows to be read
+    # Note: Resolution is poort if we read the entire spectrum at once. 
+    # Solution: Break the entire spectrum into smaller windows
     def create(self):
-        self.span = self.cfg['fstop']-self.cfg['fstart']
-        self.totpoints = self.span / self.cfg['rbw']
-        self.nmeas = int(self.totpoints / self.cfg['sweeppoints'] + 0.999)
-        self.subspan = int(self.span / self.nmeas)
         
-        self.mlist = []
+        span = self.cfg['fstop']-self.cfg['fstart']
+        totpoints = span / self.cfg['rbw']
+        nmeas = int(totpoints / self.cfg['sweeppoints'] + 0.999)
+        subspan = int(span / nmeas)
+        
+        # Clear list of windows
+        self.mlist = [] 
         
         fs = self.cfg['fstart']
-        fe = fs + self.subspan
-        while(fs + 1000 < self.cfg['fstop']):
+        fe = fs + subspan
+        # Create windows based on start / stop frequencies
+        while(fs + 1000 < self.cfg['fstop']):       #Remainder bandwidth less than 1000 hz
             self.mlist.append((fs,fe))
-            fs = fs + self.subspan
-            fe = fe + self.subspan
-        
-        return self.mlist
+            fs = fs + subspan                
+            fe = fe + subspan
 
-    #adjusts data in self.data according to self.corr
-    def applycorrection(self):       
-        for i in range(len(self.data)):
-            self.data[i] = self.data[i] + self.getfc(self.datax[i])
-
-        
-    #get correction for specific frequency
-    def getfc(self, freq):
-        f1 = int(self.fclist[0][0])
-        c1 = float(self.fclist[0][1])
-        
-        for i in range(1,len(self.fclist)):
-            if freq >= f1 and freq <= int(self.fclist[i][0]):
-                fdiff = int(self.fclist[i][0]) - f1
-                cdiff = float(self.fclist[i][1]) - c1
-                m = (freq - f1) / fdiff
-                return c1+m*cdiff
-                
-            f1 = int(self.fclist[i][0])
-            c1 = float(self.fclist[i][1])
-                
-        return 0    
-    
-    #loads file with frequency and correction values i.e. fclist a list of tuples (freq,corr)
-    def loadcorrection(self, file):
-        with open(file, 'r') as f:
-            self.fclist = [tuple(x.split(',')) for x in f.read().split('\n')]         # frequency/correction list
-    
-    def setdatafreq(self):            
+    # generate a list of X-axis values based on readings + configuration
+    def setdatafreq(self):
         step = (self.cfg['fstop'] - self.cfg['fstart']) / len(self.data)
         self.datax = [ self.cfg['fstart'] + step//2 + n * step for n in range(len(self.data))]
-        
-    def savedata(self, fname):
-        with open(fname,'w') as f:        
-            for i in range(len(self.data)):
-                f.write(str(self.datax[i]) + ',' + str(self.data[i]) + '\n')
-    
-    def save(self, fname):
-        meas = {}
-        meas['meas_cfg'] = self.cfg
-        
-    
-    def loaddata(self, fname):
+
+    # Measure all spectrum windows and return data
+    def measure(self):
+        # Clear data buffer
         self.data = []
-        self.datax = []        
-        with open(fname, 'r') as f:
-            for line in f:
-                v = line.split(',')
-                self.datax.append(float(v[0]))
-                self.data.append(float(v[1]))                       
+        self.create()
 
-    def getpeaks2(self):       
-        start = 0
-        sequence = []
-        d = [ int(n) for n in self.data]
-        for key, group in groupby(d):
-            sequence.append((key, start))
-            start += sum(1 for _ in group)
+        for m in self.mlist:
+            # Commented out setter function in DSA832 implementation. Kept in case required for future
+            '''
+            # Send configuration commands to device
+            self.device['fstart'] = m[0]       # Start recording from current window start frequency
+            self.device['fstop'] = m[1]    # End recording at next window start frequency
+            self.device['tracemode'] = self.cfg['tracemode']            
+            # Request sweep time
+            sweeptime = self.device.cmd('sweeptime','?')            
+            # initiate request of data
+            self.device['initiate'] = 1
+            '''
 
-        for (b, bi), (m, mi), (a, ai) in zip(sequence, sequence[1:], sequence[2:]):
-            if b < m and a < m:
-                yield m, mi
+            # Send configuration commands to device
+            self.device.cmd('fstart',m[0])
+            self.device.cmd('fstop', m[1])
+            self.device.cmd('tracemode', self.cfg['tracemode'])
+            # Request sweep time
+            sweeptime = self.device.cmd('sweeptime','?')
+            # calculate time delay
+            wait_time = sweeptime * self.cfg['sweepcount'] + 1     
+            # Initiate read of data
+            self.device.cmd('initiate', 1)       
 
-    def getpeaks3(self, c=10, a=0.9, nd = 0.5, ndstep = 1, th = 20):
-    
-        plist = []
-        lmax = 0
-        amplim = False
-        ndelta = False
-        ct = 0
-        
-        for i in range(len(self.data)):
+            print('st = ', sweeptime)
+            print ('sleeping ', wait_time, 's')
             
-            if self.data[i] > self.data[lmax]:
-                lmax = i
-                amplim = False
-                ct = 0
-            else:
-                ct += 1               
-                
-                if self.data[i] < a * self.data[lmax]:                
-                    amplim = True                    
-                if i > ndstep and self.data[i-ndstep] - self.data[i] > nd * self.data[i-ndstep]:
-                    ndelta = True
-                
-                if (ct > c and amplim ) or self.data[i] < 0.5 * self.data[lmax] or ndelta:
-                    if self.data[lmax] >= th:
-                        plist.append(lmax)
-                    lmax = i
-                    amplim = False
-                    ndelta = False
-                    ct = 0
-                    
-        return ( [ self.datax[i] for i in plist], [self.data[i] for i in plist] )
-   
-    def getpeaks(self, lag, threshold, influence):
-        signals = np.zeros(len(self.data))
-        filteredY = np.array(self.data)
-        avgFilter = [0]*len(self.data)
-        stdFilter = [0]*len(self.data)
-        avgFilter[lag - 1] = np.mean(self.data[0:lag])
-        stdFilter[lag - 1] = np.std(self.data[0:lag])
-        for i in range(lag, len(self.data)):
-            if abs(self.data[i] - avgFilter[i-1]) > threshold * stdFilter [i-1]:
-                if self.data[i] > avgFilter[i-1]:
-                    signals[i] = 1
-                else:
-                    signals[i] = -1
-
-                filteredY[i] = influence * self.data[i] + (1 - influence) * filteredY[i-1]
-                avgFilter[i] = np.mean(filteredY[(i-lag+1):i+1])
-                stdFilter[i] = np.std(filteredY[(i-lag+1):i+1])
-            else:
-                signals[i] = 0
-                filteredY[i] = self.data[i]
-                avgFilter[i] = np.mean(filteredY[(i-lag+1):i+1])
-                stdFilter[i] = np.std(filteredY[(i-lag+1):i+1])
-
-        d = dict(signals = np.asarray(signals),avgFilter = np.asarray(avgFilter),stdFilter = np.asarray(stdFilter))
-        #return tuple with lists for datax and data 
-        pf = [ self.datax[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
-        pv = [ self.data[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
-        return pf,pv
-
-    def plot(self, ref=None, peaklist = None): 
-        limit = [ 50 if x < 230000000 else 58 for x in self.datax]
+            while(1):
+                time.sleep(wait_time)
+                # Device should now be sweeping through windows
+                # Keep checking till the current sweep count is the max sweep count requested
+                if(self.device.cmd('sweepcountcurrent','?') == self.cfg['sweepcount']):
+                    break
+            
+            # Trace should be completed by now. Request entire trace
+            self.data.extend(self.device.cmd('tracedata',1))
         
+        self.setdatafreq()
+
+        return self.data, self.datax
+
+    # Update configuration of the measure class
+    def update_config(self, opt: int):
+        self.cfg = Config.get_config(opt)
+
+
+# Loads readings from previous session. To be used for plotting / data manipulation
+def load_sessiondata(fname):
+    # Read the JSON file and load its contents into a dictionary
+    with open(fname, 'r') as file:
+        dict = json.load(file)
+    
+    return dict
+
+# Load correction data from csv
+def loadcorrection(fname):
+    with open(fname, 'r') as f:
+        # frequency/correction list
+        fclist = [tuple(x.split(',')) for x in f.read().split('\n')]         
+        return fclist
+
+# Adjusts read data according to corrections
+def applycorrection(data, datax, fclist):
+    data0 = []
+    for i in range(len(data)):
+        data0.append(data[i] + getfc(datax[i], fclist))
+    return data0
+
+# Define correction for specific freq
+def getfc(freq, fclist):
+    f1 = int(fclist[0][0])
+    c1 = float(fclist[0][1])
         
-        plt.plot(self.datax, self.data, self.datax, limit, linewidth = 0.5)
+    for i in range(1,len(fclist)):
+        if freq >= f1 and freq <= int(fclist[i][0]):
+            fdiff = int(fclist[i][0]) - f1
+            cdiff = float(fclist[i][1]) - c1
+            m = (freq - f1) / fdiff
+            return c1+m*cdiff
+            
+        f1 = int(fclist[i][0])
+        c1 = float(fclist[i][1])
+            
+    return 0  
+
+# Get peak of read data
+def getpeaks(lag, threshold, influence, data, datax):
+    signals = np.zeros(len(data))
+    filteredY = np.array(data)
+    avgFilter = [0]*len(data)
+    stdFilter = [0]*len(data)
+    avgFilter[lag - 1] = np.mean(data[0:lag])
+    stdFilter[lag - 1] = np.std(data[0:lag])
+    for i in range(lag, len(data)):
+        if abs(data[i] - avgFilter[i-1]) > threshold * stdFilter [i-1]:
+            if data[i] > avgFilter[i-1]:
+                signals[i] = 1
+            else:
+                signals[i] = -1
+
+            filteredY[i] = influence * data[i] + (1 - influence) * filteredY[i-1]
+            avgFilter[i] = np.mean(filteredY[(i-lag+1):i+1])
+            stdFilter[i] = np.std(filteredY[(i-lag+1):i+1])
+        else:
+            signals[i] = 0
+            filteredY[i] = data[i]
+            avgFilter[i] = np.mean(filteredY[(i-lag+1):i+1])
+            stdFilter[i] = np.std(filteredY[(i-lag+1):i+1])
+
+    d = dict(signals = np.asarray(signals),avgFilter = np.asarray(avgFilter),
+             stdFilter = np.asarray(stdFilter))
+    #return tuple with lists for datax and data 
+    pf = [datax[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
+    pv = [data[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
+    return pf,pv
+
+# Plot waveform
+def plot(measurements, ref=None, peaklist = None): 
+        
+    fclist = loadcorrection('tbaf1m.csv')
+    plt.figure()
+    for meas in measurements:
+        datax = meas["Frequency"]
+        data = applycorrection(meas["Sig_Level"], datax, fclist)
+        note = meas["Note"]
+        #limit = [ 50 if x < 230000000 else 58 for x in datax]
+        #plt.plot(datax, data, datax, limit, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
+        plt.plot(datax, data, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
         if ref:
             plt.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
             
         if peaklist:            
             plt.scatter(peaklist[0] , peaklist[1])
-        
-        plt.gcf().text(0.01,0.95,'notes:')
-        plt.title("A")
-        plt.xlabel("frequency")
-        plt.ylabel("dBuV")
-        plt.ylim((0,60))
-        plt.grid()
-        plt.show()
 
-class DSA832:  
-    
-    def __init__(self):
-        self.loadcmd()
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.data = b''
-        self.trace = None
-        self.connect()
-    
-    def __setitem__(self, name, value):
-        if name not in self.inst:            
-            print('Error: Unknown command')
-    
-        if type(value) == tuple:
-            return self.cmd(name, *value)
-        else:
-            return self.cmd(name, value)
-            
-    def __getitem__(self, name):
-        pass
-        
-    def measure(self, meas):
-        meas.create()
-        meas.data = []
-        
-        
-        for k,v in meas.cfg.items():
-            if v != None:
-                self[k] = v
-
-        
-        for m in meas.mlist:
-            self['fstart'] = m[0]
-            self['fstop'] = m[1]            
-            self['tracemode'] = meas.cfg['tracemode']            
-            sweeptime = self.cmd('sweeptime','?')            
-            self['initiate'] = 1            
-            print('st = ', sweeptime)
-            print ('sleeping ', sweeptime * meas.cfg['sweepcount'] + 1, 's')
-            time.sleep(sweeptime * meas.cfg['sweepcount'] + 1)
-            while(self.cmd('sweepcountcurrent','?') != meas.cfg['sweepcount']):
-                time.sleep(sweeptime * meas.cfg['sweepcount'] + 1)
-            meas.data.extend(self.cmd('tracedata',1))
-        
-        meas.setdatafreq()
-        
-    def measuresingle(self, meas):
-        meas.data = []
-        
-        for k,v in meas.cfg.items():
-            if v != None:
-                self[k] = v       
-        
-        #self['fstart'] = meas.cfg['fstart']
-        #self['fstop'] = meas.cfg['fstop']
-        #self['tracemode'] = meas.cfg['tracemode']        
-        sweeptime = self.cmd('sweeptime','?')
-        self['initiate'] = 1        
-        print('st = ', sweeptime)
-        print ('sleeping ', sweeptime * meas.cfg['sweepcount'] + 1, 's')
-        time.sleep(sweeptime * meas.cfg['sweepcount'] + 1)
-        while(self.cmd('sweepcountcurrent','?') != meas.cfg['sweepcount']):
-            time.sleep(sweeptime * meas.cfg['sweepcount'] + 1)      
-        meas.data.extend(self.cmd('tracedata',1))
-        
-        meas.setdatafreq()
-        
-    
-    def loadcmd(self):
-        with open('vars.json','r') as f:
-            self.inst = json.loads(f.read())
-    
-
-    
-    
-    def cmd(self, cmd, arg1=None, arg2=None):
-    
-        if not cmd in self.inst:
-            print("No such command")
-        c = self.inst[cmd]['scpi']
-        
-        if arg1 != None:
-            t = self.inst[cmd]['type']
-            
-            if arg1 == '?':
-                c = c + '?'            
-            elif t == 'int' or t == 'float':
-                if type(arg1) == int or type(arg1) == float:
-                    c = c + ' ' + str(arg1)
-                if type(arg2) == int or type(arg2) == float:
-                    c = c + ' ' + str(arg2)
-            elif t == 'intns':
-                if type(arg1) == int:
-                    c = c + str(arg1)              
-            elif t == 'enum':
-                if type(arg1) == int:
-                    c = c + ' ' + self.inst[cmd]['enum'][arg1]
-                else:
-                    c = c + ' ' + arg1
-            elif t == 'filename':
-                c = c + ' E:\\' + arg1
-            print(c)
-            
-                   
-        self.send(c)
-        if 'delay' in self.inst[cmd]:
-            time.sleep(self.inst[cmd]['delay'])
-        else:
-            time.sleep(0.1)
-        
-        fmt = None
-        if 'read' in self.inst[cmd]:
-            fmt = self.inst[cmd]['read']
-            self.cleardata()
-            time.sleep(1)
-            d = self.recv()
-            if fmt == 'trace':
-                return self.processtrace(d)
-            
-        elif arg1 == '?':
-            fmt = self.inst[cmd]['type']
-            time.sleep(0.2)
-            d = self.recv()
-            if d is None:
-                time.sleep(1)
-                d = self.recv()
-            if fmt == 'int':
-                return int(d)
-            elif fmt == 'float':
-                return float(d)
-            
-                
-                
-                
-                
-    def emifilter(on = True):
-        if on:
-            self.send(':SENSe:BANDwidth:EMIFilter:STATe ON')
-        else:
-            self.send(':SENSe:BANDwidth:EMIFilter:STATe OFF')
-    
-    def setrbw(self, rbw):
-        self.send(':SENSe:BANDwidth:RESolution '+str(rbw))
-        
-    def setrbw(self, vbw):
-        self.send(':SENSe:BANDwidth:VIDeo '+str(vbw))
-    
-    def setspan(self, span):
-        self.send(':SENSe:FREQuency:SPAN '+str(span))
-
-    def setcenter(self, freq):
-        self.send(':SENSe:FREQuency:CENTer '+str(freq))
-    
-    def settracemode(self, mode, tracenum=1):
-        modestr = ('WRITe','MAXHold','MINHold','VIEW','BLANk','VIDeoavg','POWeravg')
-        if type(mode) == str:
-            self.send(':TRACe'+str(tracenum)+':MODE '+mode)
-        if type(mode) == int:
-            self.send(':TRACe'+str(tracenum)+':MODE '+modestr[mode])
-    
-    def setcontinuous(self,cont = True):
-        if cont:
-            self.send(':INITiate:CONTinuous ON')
-        else:
-            self.send(':INITiate:CONTinuous OFF')
-    
-    def connect(self, ip = '192.168.1.70'):
-        self.sock.connect(('192.168.1.70', 5555))
-        self.sock.setblocking(False)
-        
-    def send(self, cmd):
-        self.sock.send((cmd+'\r\n').encode('utf-8'))
-        
-    def recv(self, handler=None):
-        
-        for i in range(2):
-            self.data = b''
-            try:
-                d = self.sock.recv(20000)
-                if len(d):
-                    self.data = self.data + d
-                print(d.decode('utf-8'))
-                return d.decode('utf-8')
-            except Exception as e:
-                print(e)
-                time.sleep(2)
-
-    def cleardata(self):
-        self.data = b''
-        
-    def processtrace(self, data):
-        v = data.split(',')
-        v[0] = v[0].split()[1]
-        return [ float(n) for n in v]
-    
-    def multitrace(self, fstart, fstop, step):
-        data = []
-        start = fstart
-        stop = fstart + step
-        while True:
-            self.exec('freqstart',start)
-            self.exec('freqstop',stop)
-            
-            self.send(':TRACe:DATA? TRACE' + str(tracenum))
-            time.sleep(0.5)
-        
-    
-    def gettrace(self,tracenum=1):
-        self.cleardata()
-        self.send(':TRACe:DATA? TRACE' + str(tracenum))
-        time.sleep(0.5)
-        d = self.recv()
-        self.trace = self.processtrace(d)
-        fstart = 0
-        fstop = 3200000000
-        self.scalex = [ fstart + n*(fstop-fstart)/len(self.trace) for n in range(len(self.trace))]
-
-def plotoold(meas, ref=None):   
-    #limit = [ 50 if x < 230000000 else 58 for x in scalex]
-    plt.gcf().text(0.01,0.95,'notes:')
-    plt.title("A")
+    #plt.gcf().text(0.01,0.95, "Notes: " + note)
+    plt.title("Measurement Plot")
     plt.xlabel("frequency")
     plt.ylabel("dBuV")
-    plt.ylim((0,60))
+    #plt.ylim((0,60))
+    plt.tight_layout()
     plt.grid()
-    plt.legend(loc="upper left")
-    if type(meas) is list:
-        for m in meas:
-            plt.plot(m.datax, m.data, linewidth = 0.5, ls=':', label=m.description)
-        
-        #plt.plot(scalex, limit, linewidth = 0.5)
-    else:
-        plt.plot(meas.datax, meas.data, linewidth = 0.5)
-    if ref:
-        plt.plot(ref.datax, ref.data, linewidth = 0.5, ls=':', label=ref.description)
-        
-    plt.legend(loc="upper left")
+    plt.legend()
     plt.show()
+    return plt
 
-def plot(meas, ref=None, ymin = 10, ymax = 70, log=False, lim='none', saveimg=None):   
-    #limit = [ 50 if x < 230000000 else 58 for x in scalex]
-    limconducted_avgx, limconducted_avgy = [150000,  500000, 5000000, 5000000, 30000000], [56, 46, 46, 50, 50]
-    limconducted_qpx, limconducted_qpy = [150000, 500000, 5000000, 5000000, 30000000], [66, 56, 56, 60, 60]
-    
-    limradiated_avgx, limradiated_avgy = [30000000,  230000000, 230000000, 1000000000], [50, 50, 56, 56]
-    limradiated_qpx, limradiated_qpy = [30000000,  230000000, 230000000, 1000000000], [50, 50, 56, 56]
-    
-    fig, ax = plt.subplots(figsize=(14, 7))
-    fig.text(0.01,0.95,'notes:')
-    ax.set_title("A")
-    ax.set_xlabel("frequency [Hz]")
-    ax.set_ylabel("dBuV")
-    ax.set_ylim((ymin,ymax))
-    ax.grid()
-    
-    if log:
-        ax.set_xscale("log")
-    mkfunc = lambda x, pos: '%.1f G' % (x * 1e-9) if x >= 1e9 else '%3.1f M' % (x * 1e-6) if x >= 1e6 else '%3.1f k' % (x * 1e-3)
-    #mkfunc = lambda x, pos: '%.1f' % (x * 1e-6)
-    mkformatter = ticker.FuncFormatter(mkfunc)
-    ax.xaxis.set_major_formatter(mkformatter)
-    
-    if lim == 'cond':
-        ax.plot(limconducted_avgx, limconducted_avgy, linewidth = 1, ls='-', color = 'red', label = 'Lim AVG')
-        ax.plot(limconducted_qpx, limconducted_qpy, linewidth = 1, ls='-', color = 'blue', label = 'Lim QP')
-    elif lim == 'rad':        
-        ax.plot(limradiated_avgx, limradiated_avgy, linewidth = 1, ls='-', color = 'red', label = 'Lim AVG')
-        ax.plot(limradiated_qpx, limradiated_qpy, linewidth = 1, ls='-', color = 'blue', label = 'Lim QP')
-    
-    if type(meas) is list:
-        for m in meas:
-            ax.plot(m.datax, m.data, linewidth = 0.5, ls='-', label=m.description)
-        
-        #plt.plot(scalex, limit, linewidth = 0.5)
+def list_json_files(directory = ''):
+
+    json_files = []              # list of validjson dictionaries
+    if directory == '':
+        # Use glob to find all JSON files in the current folder
+        # If no directory is provided
+        json_file_paths = glob.glob(os.path.join('.','**/*.json'), recursive=True)
     else:
-        ax.plot(meas.datax, meas.data, linewidth = 0.5)
-    if ref:
-        ax.plot(ref.datax, ref.data, linewidth = 0.5, ls='-', label=ref.description)
-    box = ax.get_position()
-    
-    plt.tight_layout(rect=[0, 0, 1, 1])
-    #cursor = Cursor(ax, useblit=True, color='red', linewidth=0.5)
-    mplcursors.cursor()    
-    #ax.set_position([box.x0, box.y0, box.width , box.height * 0.8])
-    #ax.legend(loc='upper left', bbox_to_anchor=(0.0, 1.3))
-    ax.legend(loc="upper right")
-    if saveimg:
-        plt.savefig(saveimg)
-    plt.show(block=False)
+        # Else find files in given directory / sub directory
+        json_file_paths = glob.glob(os.path.join(directory,'**/*.json'),  recursive=True)
 
-def meas(i, name):
-    m = Measurement(descr=name)
-    m.loadcorrection('tbaf1m.csv')
-    i.measure(m)
-    m.applycorrection()
-    return m
+    # Filter out invalid json files
+    for file in json_file_paths:
+        # load data from json file
+        file_dict = load_sessiondata(file)
+        # Search for at least one valid measurement in each json file
+        if "measure0" in file_dict:
+            # Append to list of valid json files
+            json_files.append({"filename":os.path.basename(file), "filepath": file})
 
-def meascond(i, name,cfg=None):            
-    m = Measurement(descr=name)
-    if cfg == None:
-        m.cfg = cfg_cond1()
+    # Print the list of valid JSON files found
+    if json_files != None:
+        #print("Found JSON files:")
+        #count = 0
+        #for valid_json_file in json_files:
+        #    print(f'{count}. {valid_json_file.get("filename")}')
+        #    count += 1
+        return json_files
+
     else:
-        m.cfg = cfg
-    i.measure(m)
-    m.savedata(m.description)
-    return m
-    
-    
-def measrad(i, name,cfg=None):            
-    m = Measurement(descr=name)
-    if cfg == None:
-        m.cfg = cfg_rad1()
-    else:
-        m.cfg = cfg
-    m.loadcorrection('tbaf1m.csv')
-    i.measure(m)
-    m.applycorrection()
-    m.savedata(m.description)
-    return m
+        #print("No JSON files found in the folder.")
+        return
 
-i=DSA832()
-meas(i,"hi")
 
-#bg=Measurement('comdry-bg.csv')
-#t1=Measurement('comdry-back-0deg-lcd-nokeys.csv')
-#t2=Measurement('comdry-front-0deg-lcd-nokeys.csv')
-#t3=Measurement('comdry-back-90deg-lcd-nokeys.csv')
-#t4=Measurement('comdry-front-90deg-lcd-nokeys.csv')
-#mlist = [t1,t2,t3,t4]
+# API's
+def meas_instr():
+    dev = DSA832()      # Create device object
+    Session(dev, input("Savefile Name: "), input("Test Description:")).begin()
+
+def meas_plot():
+    files = list_json_files()
+    selection = int(input("Select file to plot: "))
+    plot_measured(files[selection])
+
+#meas_plot()
+#meas_instr()

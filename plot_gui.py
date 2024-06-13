@@ -6,13 +6,14 @@ from tkinter import scrolledtext        # Import tkinter module for scroll text 
 from tkinter import *                   # Import all tkinter modules
 from tkinter import filedialog          
 from tkinter import ttk
+from multiprocessing import process
+import sys
 
-import emc_refactor as emc
+import emc
 
 '''Global Variables'''
 settings_dir_path = ".settings"   # Saves the folder and file to store settings in
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
-
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
 theme = {                
@@ -246,8 +247,13 @@ def create_menubar(window):
     window.config(menu=menu_bar)
 
     # Create sub menus
+    session_menu = Menu(menu_bar)
     theme_menu = Menu(menu_bar)
 
+    menu_bar.add_cascade(label="Session", menu=session_menu)
+    session_menu.add_command(label="Plot", command=lambda: switch_mode_plot(window))
+    session_menu.add_command(label="Measure", command=lambda: switch_mode_measure(window))
+    
     menu_bar.add_cascade(label="Theme", menu=theme_menu)
     theme_menu.add_command(label="Default", command=lambda: set_theme(window,theme["default"]))
     theme_menu.add_command(label="Dark", command=lambda: set_theme(window,theme["dark"]))
@@ -255,6 +261,21 @@ def create_menubar(window):
 
     return menu_bar
 
+
+'''
+Function Description: Alterate between modes (Plot vs Measurement)
+'''
+def switch_mode_plot(window):
+    # Clear current window
+    for widget in window.winfo_children():
+        widget.destroy()
+    plot_session(window)
+
+def switch_mode_measure(window):
+    # Clear current window
+    for widget in window.winfo_children():
+        widget.destroy()
+    measure_session(window)
 
 '''
 Theme Functions
@@ -330,13 +351,17 @@ def load_theme():
     return saved_theme
 
 
+class measure_session():
+    def __init__(self, window):
+        pass
+
 # Generates a session plot window
 class plot_session():
 
     # Generates new window
-    def __init__(self):
+    def __init__(self, window):
         # Init class variables
-        self.window = None              # Parent window
+        self.window = window            # Parent window
         self.entry_directory = None     # folder directory textbox
         self.button_directory = None    # Folder search button
         self.tree_json = None           # tree shows available json files
@@ -364,7 +389,7 @@ class plot_session():
         Frame Definitions
         '''
         # Generate GUI window
-        self.window = ttk_b.Window(themename = theme["default"])
+        #self.window = ttk_b.Window(themename = theme["default"])
         # Define window size
         self.window.geometry(str(sizex) + 'x' + str(sizey))
         # Set title for window
@@ -385,7 +410,7 @@ class plot_session():
         
         # load current directory in textbox
         self.entry_directory.insert(END,self.curr_directory)
-
+        
         # List all sessions in folder / sub-folders
         self.json_files = emc.list_json_files()
 
@@ -393,11 +418,7 @@ class plot_session():
         for file in self.json_files:
             self.tree_json.insert('',END, values= file.get("filename"))
 
-        '''
-        Main loop
-        '''
         self.window.mainloop()
-
     
     '''
     Function Description: return new directory selected by user
@@ -443,10 +464,12 @@ class plot_session():
                 self.selected_json_data = emc.load_sessiondata(selected_item)   # Load data in json file
         
         # Update metadata field with file name, desription etc
+        self.entry_metadata.config(state='normal')
         self.entry_metadata.delete("1.0",END)
         self.entry_metadata.insert(END, f'File Name: \t\t{self.selected_json_data["File Name"]}\n')
         self.entry_metadata.insert(END, f'Date Created: \t\t{self.selected_json_data["Date Created"]}\n')
         self.entry_metadata.insert(END, f'Description: \t\t{self.selected_json_data["Description"]}\n')
+        self.entry_metadata.config(state='disabled')
 
         # Update measurements tree with measurement from selected json
         # Clear json tree
@@ -495,10 +518,12 @@ class plot_session():
             self.selected_measurement[-1]['JSON_Name'] = self.json_file_selected["filename"].replace(".json",'')
 
         # Update Metadata box with data from last selected measurement
+        self.entry_metadata.config(state='normal')
         self.entry_metadata.delete("1.0",END)
         self.entry_metadata.insert(END, f'Time Stamp: \t\t{self.selected_measurement[-1]["TimeStamp"]}\n')
         self.entry_metadata.insert(END, f'Configuration: \t\t{self.selected_measurement[-1]["Configuration"]}\n')
         self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement[-1]["Note"]}\n')
+        self.entry_metadata.config(state='disabled')
         
     '''
     Function Description: Called when the right button is pressed. Moves selected items from measurement tree
@@ -550,9 +575,8 @@ class plot_session():
             tree
     '''
     def pltb_pressed(self):
-
         # plot plotting dictionary
-        emc.plot_measured(self.to_plot)
+        emc.plot(self.to_plot)
 
     '''
     Function Description: Called when clear button is pressed. Clears list of items from selection tree and 
@@ -675,7 +699,8 @@ class plot_session():
         self.button_directory = define_button(self.frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
 
         '''frame_metadata widgets'''
-        self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], width=10, height=3, sticky=NSEW)
+        self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], 
+                                                    width=10, height=3, default_state='disabled', sticky=NSEW)
 
         '''frame_json widgets'''
         define_label(self.frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
@@ -701,4 +726,12 @@ class plot_session():
         self.tree_selection = define_treeview(self.frame_selection, pos_selection_tree[0], pos_selection_tree[1], sticky=NSEW)
         self.tree_selection.config(columns=('Selection'))
 
-plot_session()
+    #def destroy(self):
+    #    for widet in self.window.winfo_children():
+    #        Widget.destroy()
+    #    self.destroy()
+
+ # Generate GUI window
+window = ttk_b.Window(themename = theme["default"])
+plot_session(window)
+window.mainloop()
