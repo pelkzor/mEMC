@@ -428,54 +428,64 @@ def getpeaks(lag, threshold, influence, data, datax):
     return pf,pv
 
 # Plot waveform
-def plot(data, datax, notes = "", savefile = "Plot", ref=None, peaklist = None): 
-    limit = [ 50 if x < 230000000 else 58 for x in datax]
+def plot(measurements, ref=None, peaklist = None): 
         
     plt.figure()
-    plt.plot(datax, data, datax, limit, linewidth = 0.5)
-    if ref:
-        plt.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
-        
-    if peaklist:            
-        plt.scatter(peaklist[0] , peaklist[1])
-    
-    plt.gcf().text(0.01,0.95, "Notes: " + notes)
-    plt.title("A")
+    for meas in measurements:
+        data = meas["Sig_Level"]
+        datax = meas["Frequency"]
+        note = meas["Note"]
+        #limit = [ 50 if x < 230000000 else 58 for x in datax]
+        #plt.plot(datax, data, datax, limit, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
+        plt.plot(datax, data, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
+        if ref:
+            plt.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
+            
+        if peaklist:            
+            plt.scatter(peaklist[0] , peaklist[1])
+
+    #plt.gcf().text(0.01,0.95, "Notes: " + note)
+    plt.title("Measurement Plot")
     plt.xlabel("frequency")
     plt.ylabel("dBuV")
     #plt.ylim((0,60))
     plt.tight_layout()
     plt.grid()
-    #plt.savefig(f'{savefile}.png')
-    plt.show()
+    plt.legend()
+    return plt
 
     
 # Read measured data, process, print peaks, plot 
-def plot_measured(data_filename):
+def plot_measured(measurements_list):
 
-    parent_dict = load_sessiondata(data_filename)
+    #parent_dict = load_sessiondata(data_filename)
     fclist = loadcorrection('tbaf1m.csv')
-    
-    # Iterate through the json file for each measure keyword until none are left
-    for i in range(100):
-        measure_key = f"measure{i}"
-        # Search for measurement key in json file
-        measurement = parent_dict.get(measure_key, "Nonexistent")
-        # Return nonexisent keyword if not found
-        if(measurement == "Nonexistent"):
-            # Assume all keys found and plotted. exit
-            print("All Measurements Plotted!")
-            break
-            
-        # Access all information and isolate
-        data = measurement["Sig_Level"]
-        datax = measurement["Frequency"]
-        note = measurement["Note"]
-        config = measurement["Configuration"]
-        image_note = f'{note}\nConfig: {config}'
 
-    data, datax = applycorrection(data, datax, fclist)
-    plot(data, datax, image_note)
+    # Iterate through the json file for each measure keyword until none are left
+    for measurement in measurements_list:
+        #measure_key = f"measure{i}"
+        # Search for measurement key in json file
+        #measurement = parent_dict.get(measure_key, "Nonexistent")
+        measurement["Sig_Level"], measurement["Frequency"] = applycorrection(measurement["Sig_Level"], measurement["Frequency"], fclist)
+        # Return nonexisent keyword if not found
+        #if(measurement == "Nonexistent"):
+            # Assume all keys found and plotted. exit
+        #    print("All Measurements Plotted!")
+        #    break
+        
+        # Append to list
+       #measurement_list.append(measurement)
+    plot(measurements_list).show()
+
+        # Access all information and isolate
+        #data = measurement["Sig_Level"]
+        #datax = measurement["Frequency"]
+        #note = measurement["Note"]
+        #config = measurement["Configuration"]
+        #image_note = f'{note}\nConfig: {config}'
+
+    #data, datax = applycorrection(data, datax, fclist)
+    #plot(data, datax, image_note)
 
 def list_json_files(directory = ''):
 

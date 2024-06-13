@@ -1,10 +1,10 @@
-import ttkbootstrap as ttk_b
+import ttkbootstrap as ttk_b            # Import TTKBootstrap
 from ttkbootstrap.constants import *
-import json     # Import json module
-import os       # For directory manipulation
+import json                             # Import json module
+import os                               # For directory manipulation
 from tkinter import scrolledtext        # Import tkinter module for scroll text box
 from tkinter import *                   # Import all tkinter modules
-from tkinter import filedialog
+from tkinter import filedialog          
 from tkinter import ttk
 
 import emc_refactor as emc
@@ -21,6 +21,9 @@ theme = {
         "light"     : "journal"
         }
 
+'''
+GUI Reference: https://github.com/nagars/SheepTerm
+'''
 
 '''
 Function Description: Define a frame for the UI objects
@@ -28,13 +31,14 @@ Function Description: Define a frame for the UI objects
 Parameters: container - Main window object
 position_y - column index for frame position
 position_x - row index for frame position
+frame_sticky - Frame side to attach to
 theme = colour scheme
 
 Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/frame/
 
 Return: frame object
 '''
-def define_frame(container, position_y, position_x, frame_sticky=None, theme='default'):
+def define_frame(container, position_y = 0, position_x = 0, frame_sticky=None, theme='default'):
 
     frame = ttk_b.Frame(container, bootstyle=theme)
     frame.grid(column=position_y, row=position_x)
@@ -76,12 +80,13 @@ text - label for the button
 default_state - active / inactive
 function_call - callback function triggered when button is pressed
 theme - colour scheme
+sticky - Frame side to attach to
 
 Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/button/
 
 Return: button object
 '''
-def define_button(container, position_y, position_x, text = '', function_call = None, default_state = 'normal', theme = 'default', sticky=None):
+def define_button(container, position_y = 0, position_x = 0, text = '', function_call = None, default_state = 'normal', theme = 'default', sticky=None):
     
     button = ttk_b.Button(container, text=text, command=function_call, state=default_state, bootstyle=theme)
     button.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
@@ -97,12 +102,13 @@ text - label text
 position_y - columnm index for frame position
 position_x - row index for frame position
 theme - colour scheme
+sticky - Frame side to attach to
 
 Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/label/
 
 Return: button object
 '''
-def define_label(container, position_y, position_x, text = '', theme = 'normal', sticky=None):
+def define_label(container, position_y = 0, position_x = 0, text = '', theme = 'normal', sticky=None):
 
     label = ttk_b.Label(container, text=text, bootstyle=theme)
     label.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
@@ -125,7 +131,7 @@ Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/checkbut
 
 Return: button object
 '''
-def define_checkbox(container, position_y, position_x, text = '', status_variable = None, function_call = None, 
+def define_checkbox(container, position_y = 0, position_x = 0, text = '', status_variable = None, function_call = None, 
                     default_state = 'normal', theme = 'default'):
 
     checkbox = ttk_b.Checkbutton(container, text=text, variable=status_variable, command=function_call, 
@@ -141,12 +147,14 @@ Function Description: Define a scroll terminal
 Parameters: container - Main window object
 width - width of the textbox
 height - height of the textbox
+default_state - State of widget (Active / disabled)
 position_y - columnm index for frame position
 position_x - row index for frame position
+sticky - Frame side to attach to
 
 Return: textbox object
 '''
-def define_scroll_textbox(container, position_y = 0, position_x = 0, width = None, default_state = "normal", height = None, sticky=None):
+def define_scroll_textbox(container, position_y = 0, position_x = 0, width = None, height = None, default_state = "normal", sticky=None):
 
     scrollbox = scrolledtext.ScrolledText(container, width=width, height=height, state=default_state)
     scrollbox.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
@@ -164,6 +172,8 @@ position_y - columnm index for frame position
 position_x - row index for frame position
 default_state - active / inactive
 theme - colour scheme
+sticky - Frame side to attach to
+state - State of widget (Active / disabled)
 
 Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/entry/
 
@@ -194,7 +204,7 @@ Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/radiobut
 
 Return: button object
 '''
-def define_radiobutton(container, position_y, position_x, text = '', status_variable = None, function_call = None, 
+def define_radiobutton(container, position_y = 0, position_x = 0, text = '', status_variable = None, function_call = None, 
                        default_state = 'normal', theme = 'default'):
     
     radiobutton = ttk_b.Radiobutton(container, text=text, variable=status_variable, command=function_call, 
@@ -204,14 +214,20 @@ def define_radiobutton(container, position_y, position_x, text = '', status_vari
     return radiobutton
 
 '''
+Function Description: Define a tree view widget
+
+Parameters: container - Main window object
+position_y - columnm index for frame position
+position_x - row index for frame position
+sticky - frame side to attach to
+selectmode - Item selection options (browse / extended)
+
 Note: Refer to https://ttkbootstrap.readthedocs.io/en/version-0.5/widgets/treeview.html
 '''
+def define_treeview(container, position_y = 0, position_x = 0, selectmode = 'browse', sticky=None):
 
-def define_treeview(container, position_y, position_x, sticky=None):
-
-    tree = ttk.Treeview(container, show='headings')
+    tree = ttk.Treeview(container, show='headings', selectmode=selectmode)
     tree.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
-
     return tree
 
 '''
@@ -220,6 +236,8 @@ Function Description: Create a custom menu bar with options
 Parameters: None
 
 Return: Instance of menubar
+
+Note: Refer to https://tkinterpython.top/menustoolbars/
 '''
 def create_menubar(window):
 
@@ -312,7 +330,7 @@ def load_theme():
     return saved_theme
 
 
-# Generates a session plot window as a separate process. terminate current process
+# Generates a session plot window
 class plot_session():
 
     # Generates new window
@@ -330,9 +348,13 @@ class plot_session():
         
         self.curr_directory = os.getcwd()   # Get current directory
 
-        self.json_files = {}    # Dictionary of filenames and paths
-        self.selected_json_data = {}   # Dictionary of current select json file data
-        self.selected_measurement = {}    # Dictionary of selected measurement data from selected json file
+        self.json_files = []    # List of dictionaries of filenames and paths   {"filename", "filepath"}
+        self.json_file_selected = {} # Dictionary of selected filename and path   {"filename", "filepath"}   
+        self.selected_json_data = {}   # Dictionary of current select json file data.
+        # Dictionary of selected measurements data from selected json file 
+        # {Sig_Level, Frequency, Note, Configuration, TimeStamp, Name, JSON_filename}
+        self.selected_measurement = []    
+        self.to_plot = []       # List of measurement to plot
 
         # Parent window size
         sizex = 1490
@@ -347,7 +369,7 @@ class plot_session():
         self.window.geometry(str(sizex) + 'x' + str(sizey))
         # Set title for window
         self.window.title("EMC_Sessions_Plots")
-        # Ensure display frame expands with window
+        # Ensure display frame expands with window as required
         self.window.columnconfigure(0, weight=1)
         self.window.columnconfigure(1, weight=1)
         self.window.columnconfigure(3, weight=1)
@@ -367,7 +389,7 @@ class plot_session():
         # List all sessions in folder / sub-folders
         self.json_files = emc.list_json_files()
 
-        # Print to sessions to tree
+        # Print json files in current directory/sub-directories to sessions tree
         for file in self.json_files:
             self.tree_json.insert('',END, values= file.get("filename"))
 
@@ -397,7 +419,7 @@ class plot_session():
             self.tree_json.insert('',END, values=file.get("filename"))
     
     '''
-    Function: Called when the user selects a json file. Writes 
+    Function Description: Called when the user selects a json file. Writes 
                 description and measurements list to widgets
     '''
     def json_selected(self, event):
@@ -407,17 +429,18 @@ class plot_session():
         if not selected_items:
             return
         
-        # Store first selected item
+        # Highlight selection
+        for item in selected_items:
+            self.tree_json.item(item, tags=("highlight",))
+        
+        # Store first selected item name
         selected_item = self.tree_json.item(selected_items[0])["values"][0]
-        # Deselect all other items. Ensure only 1 item can be selected
-        for item in self.tree_json.get_children():
-            if item != selected_item:
-                self.tree_json.selection_remove(item)
 
         # Load json data
         for file in self.json_files:
             if file.get("filename") == selected_item:
-                self.selected_json_data = emc.load_sessiondata(selected_item)
+                self.json_file_selected = file  # Save the filename and filepath dictionary
+                self.selected_json_data = emc.load_sessiondata(selected_item)   # Load data in json file
         
         # Update metadata field with file name, desription etc
         self.entry_metadata.delete("1.0",END)
@@ -440,76 +463,114 @@ class plot_session():
                 break
             # List on measurement tree
             self.tree_measurement.insert('',END, values=measure_key)
-            
-            ''' # Access all information and isolate
-            data = measurement["Sig_Level"]
-            datax = measurement["Frequency"]
-            note = measurement["Note"]
-            config = measurement["Configuration"]
-            image_note = f'{note}\nConfig: {config}'
-            '''
 
+    '''
+    Function Description: Called when a measurement is selected in the
+        measurement tree. Highlights selected item. Loads the measurement object
+        with all measurement data. Appends to list of selected measurements.
+        Appends the json file name and path associated with this measurement
+        to measurement dictionary to be used for labelling in plots
+    '''
     def measurement_selected(self, event):
+        
+        # Clear previous selection
+        self.selected_measurement = []
+        
         # Get list of items selected
         selected_items = self.tree_measurement.selection()
         # Check if no item selected
         if not selected_items:
             return
         
-        # Store first selected item
-        selected_item = self.tree_measurement.item(selected_items[0])["values"][0]
-        # Deselect all other items. Ensure only 1 item can be selected
-        for item in self.tree_measurement.get_children():
-            if item != selected_item:
-                self.tree_measurement.selection_remove(item)
+        for item in selected_items:
+            # Highlight selection
+            self.tree_measurement.item(item, tags=("highlight",))
+            # Convert item ID to item name
+            item_name = self.tree_measurement.item(item)["values"][0]
+            # Temporarily save measurement data
+            self.selected_measurement.append(self.selected_json_data[item_name])
+            # Append name of the measurement
+            self.selected_measurement[-1]["Name"] = item_name
+            # Append name of json file
+            self.selected_measurement[-1]['JSON_Name'] = self.json_file_selected["filename"].replace(".json",'')
 
-        # Temporarily save measurement data
-        self.selected_measurement = self.selected_json_data[selected_item]
-        # Append the name of measurement to dictionary
-        self.selected_measurement["Name"] = selected_item
-
-        # Update Metadata box
+        # Update Metadata box with data from last selected measurement
         self.entry_metadata.delete("1.0",END)
-        self.entry_metadata.insert(END, f'Time Stamp: \t\t{self.selected_measurement["TimeStamp"]}\n')
-        self.entry_metadata.insert(END, f'Configuration: \t\t{self.selected_measurement["Configuration"]}\n')
-        self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement["Note"]}\n')
-
+        self.entry_metadata.insert(END, f'Time Stamp: \t\t{self.selected_measurement[-1]["TimeStamp"]}\n')
+        self.entry_metadata.insert(END, f'Configuration: \t\t{self.selected_measurement[-1]["Configuration"]}\n')
+        self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement[-1]["Note"]}\n')
         
+    '''
+    Function Description: Called when the right button is pressed. Moves selected items from measurement tree
+            to selection tree. Appends associated measurement objects to list to be plotted
+    '''    
     def rb_pressed(self):
         
-        # List measurement selected on selection tree
-        self.tree_selection.insert('',END, values=self.selected_measurement["Name"])
-
-        # Add measurement data to plotting dictionary
-
-        pass
-
+        # Get list of measurements already in selection tree
+        item_names = []
+        for item in self.tree_selection.get_children():
+            item_names.append(self.tree_selection.item(item)["values"][0])
+            
+        # iterate through measurements selected in measurement tree
+        for meas in self.selected_measurement:
+            meas_name = f'{meas["JSON_Name"]}/{meas["Name"]}'
+            if meas_name not in item_names:
+                self.tree_selection.insert("", END, values=meas_name)
+                # Add measurement data to plotting dictionary
+                self.to_plot.append(meas)
+        
+    '''
+    Function Description: Called when the left button is pressed. Removes selected items from selection tree. 
+                Removes associated measurement objects from list to be plotted 
+    '''
     def lb_pressed(self):
 
         # Delete measurement selected in selection tree
+        # Get list of measurements already in selection tree
+        existing_items = []
+        for item in self.tree_selection.get_children():
+            # Append a dictionary containing the item name and id
+            existing_items.append({"item_name" : self.tree_selection.item(item)["values"][0], "id" : item})
 
-        # Remove measurement data to plotting dictionary
+        # iterate through measurements selected in measurement tree
+        for meas in self.selected_measurement:
+            meas_name = f'{meas["JSON_Name"].replace(".json",'')}/{meas["Name"]}'
+            # Iterate through items in selection tree
+            for item in existing_items:
+                # Check if there is a name match between selection in measurement tree
+                # and items in selection tree
+                if meas_name in item["item_name"]:
+                    # Remove from seletion tree
+                    self.tree_selection.delete(item["id"])
+                    # Remove measurement data from plotting dictionary
+                    self.to_plot.remove(meas)
 
-        pass
-
+    '''
+    Function Description: Called when plot button is pressed. Plots list of measurement objects in selection
+            tree
+    '''
     def pltb_pressed(self):
 
         # plot plotting dictionary
-        
+        emc.plot_measured(self.to_plot)
+
         pass
 
+    '''
+    Function Description: Called when clear button is pressed. Clears list of items from selection tree and 
+            clear list of measurement objects to be plotted
+    '''
     def clrb_pressed(self):
 
         # Clear selection tree
         for item in self.tree_selection.get_children():
             self.tree_selection.delete(item) 
+        
+        # Clear list of measurement to plot
+        self.to_plot = []
 
     '''
-    Function Description: Generate required frames
-
-    Parameters: None
-
-    Return: None
+    Function Description: Generate required frames for GUI
     '''
     def create_frames(self):
         
@@ -582,7 +643,9 @@ class plot_session():
         frame_buf.grid(columnspan=4)
 
 
-
+    '''
+    Function Description: Defines widgets for each frame
+    '''
     def create_widgets(self):
 
         '''
@@ -624,7 +687,7 @@ class plot_session():
 
         '''frame_measurement widgets'''
         define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
-        self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_tree[0], pos_measurement_tree[1], sticky=NSEW)
+        self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_tree[0], pos_measurement_tree[1], selectmode='extended', sticky=NSEW)
         self.tree_measurement.config(columns=('Measurement'))
         self.tree_measurement.bind('<<TreeviewSelect>>', self.measurement_selected)
 
