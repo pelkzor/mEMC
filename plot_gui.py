@@ -554,8 +554,6 @@ class plot_session():
         # plot plotting dictionary
         emc.plot_measured(self.to_plot)
 
-        pass
-
     '''
     Function Description: Called when clear button is pressed. Clears list of items from selection tree and 
             clear list of measurement objects to be plotted

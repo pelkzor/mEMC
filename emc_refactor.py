@@ -375,9 +375,10 @@ def loadcorrection(fname):
 
 # Adjusts read data according to corrections
 def applycorrection(data, datax, fclist):
+    data0 = []
     for i in range(len(data)):
-        data[i] = data[i] + getfc(datax[i], fclist)
-    return data, datax
+        data0.append(data[i] + getfc(datax[i], fclist))
+    return data0
 
 # Define correction for specific freq
 def getfc(freq, fclist):
@@ -430,10 +431,11 @@ def getpeaks(lag, threshold, influence, data, datax):
 # Plot waveform
 def plot(measurements, ref=None, peaklist = None): 
         
+    fclist = loadcorrection('tbaf1m.csv')
     plt.figure()
     for meas in measurements:
-        data = meas["Sig_Level"]
         datax = meas["Frequency"]
+        data = applycorrection(meas["Sig_Level"], datax, fclist)
         note = meas["Note"]
         #limit = [ 50 if x < 230000000 else 58 for x in datax]
         #plt.plot(datax, data, datax, limit, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
@@ -459,14 +461,14 @@ def plot(measurements, ref=None, peaklist = None):
 def plot_measured(measurements_list):
 
     #parent_dict = load_sessiondata(data_filename)
-    fclist = loadcorrection('tbaf1m.csv')
+    #fclist = loadcorrection('tbaf1m.csv')
 
     # Iterate through the json file for each measure keyword until none are left
-    for measurement in measurements_list:
+    #for measurement in measurements_list:
         #measure_key = f"measure{i}"
         # Search for measurement key in json file
         #measurement = parent_dict.get(measure_key, "Nonexistent")
-        measurement["Sig_Level"], measurement["Frequency"] = applycorrection(measurement["Sig_Level"], measurement["Frequency"], fclist)
+        #measurement["Sig_Level"], measurement["Frequency"] = applycorrection(measurement["Sig_Level"], measurement["Frequency"], fclist)
         # Return nonexisent keyword if not found
         #if(measurement == "Nonexistent"):
             # Assume all keys found and plotted. exit
@@ -476,16 +478,6 @@ def plot_measured(measurements_list):
         # Append to list
        #measurement_list.append(measurement)
     plot(measurements_list).show()
-
-        # Access all information and isolate
-        #data = measurement["Sig_Level"]
-        #datax = measurement["Frequency"]
-        #note = measurement["Note"]
-        #config = measurement["Configuration"]
-        #image_note = f'{note}\nConfig: {config}'
-
-    #data, datax = applycorrection(data, datax, fclist)
-    #plot(data, datax, image_note)
 
 def list_json_files(directory = ''):
 
