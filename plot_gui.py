@@ -23,10 +23,6 @@ theme = {
         }
 
 '''
-GUI Reference: https://github.com/nagars/SheepTerm
-'''
-
-'''
 Function Description: Define a frame for the UI objects
 
 Parameters: container - Main window object
@@ -57,15 +53,17 @@ position_y - columnm index for frame position
 position_x - row index for frame position
 default_state - default option selected by drop down menu
 theme - colour scheme
+sticky - Frame side to attach to
 
 Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/combobox/
 
 Return: drop down object
 '''
-def define_drop_down(container, position_y, position_x, content_list, default_state = 'normal', theme = 'default'):
+def define_drop_down(container, position_y, position_x, content_list, default_state = 'normal', 
+                     theme = 'default', sticky=None):
 
     menu = ttk_b.Combobox(container, value=content_list, state=default_state, bootstyle = theme)
-    menu.grid(column=position_y, row=position_x, padx=1, pady=1)
+    menu.grid(column=position_y, row=position_x, padx=1, pady=1, sticky=sticky)
 
     return menu
 
@@ -353,8 +351,295 @@ def load_theme():
 
 class measure_session():
     def __init__(self, window):
+        # Init class variables
+        self.window = window
+        self.curr_directory = os.getcwd()   # Get current directory
+
+        # Frames
+        self.frame_directory = None 
+        self.frame_config = None
+        self.frame_peaks_config = None
+        self.frame_graph = None
+        self.frame_note = None
+        self.frame_buttons = None
+
+        # Widgets
+        self.session_entry_box = None
+        self.config_dropdown = None
+                
+
+        # Parent window size
+        sizex = 1490
+        sizey = 600
+
+        '''
+        Frame Definitions
+        '''
+        # Generate GUI window
+        # Define window size
+        self.window.geometry(str(sizex) + 'x' + str(sizey))
+        # Set title for window
+        self.window.title("EMC_Sessions_Measurements")
+        # Ensure display frame expands with window as required
+
+        # Create a menu Bar
+        create_menubar(self.window)
+        # Set previously saved theme
+        set_theme(self.window)
+        # Create framework
+        self.create_frames()
+        self.create_widgets()
+        
+        # load current directory in textbox
+        #self.entry_directory.insert(END,self.curr_directory)
+
+        self.window.mainloop()
+
+    '''
+    Function Description: Generate required frames for GUI
+    '''
+    def create_frames(self):
+        
+        '''
+        Frame Position values (y,x coordinate in main window)
+        '''
+        pos_directory_frame     = 0,0
+        pos_graph_frame         = 2,0
+        pos_button_frame        = 1,1
+        pos_config_frame        = 0,1
+        pos_peaks_config_frame  = 1,2
+        pos_notes_frame         = 0,3
+
+        '''
+        Frame Definitions
+        '''
+        # Define parent directory frame at the top
+        self.frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
+        # Add some spacing
+        self.frame_directory.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_directory.columnconfigure(0, weight=1)
+        self.frame_directory.rowconfigure(0, weight=1)
+        # Ensure the frame expands across columns
+        self.frame_directory.grid(columnspan=2)
+
+        # Define config directory frame
+        self.frame_config = define_frame(self.window, pos_config_frame[0], pos_config_frame[1], NSEW)
+        # Add some spacing
+        self.frame_config.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_config.columnconfigure(0, weight=1)
+        self.frame_config.rowconfigure(0, weight=1)
+
+        # Define peaks configuration frame
+        self.frame_peaks_config = define_frame(self.window, pos_peaks_config_frame[0], 
+                                               pos_peaks_config_frame[1], NSEW)
+        # Add some spacing
+        self.frame_peaks_config.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_peaks_config.columnconfigure(0, weight=1)
+        self.frame_peaks_config.rowconfigure(0, weight=1)
+        
+        # Define button configuration frame
+        self.frame_buttons = define_frame(self.window, pos_button_frame[0], pos_button_frame[1], NSEW)
+        # Add some spacing
+        self.frame_buttons.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_buttons.columnconfigure(0, weight=1)
+        self.frame_buttons.rowconfigure(0, weight=1)
+        
+        # Define graph frame
+        self.frame_graph = define_frame(self.window, pos_graph_frame[0], pos_graph_frame[1], NSEW)
+        # Add some spacing
+        self.frame_graph.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_graph.columnconfigure(0, weight=1)
+        self.frame_graph.rowconfigure(0, weight=1)
+        
+        # Define notes frame
+        self.frame_note = define_frame(self.window, pos_notes_frame[0], pos_notes_frame[1], NSEW)
+        # Add some spacing
+        self.frame_note.grid(padx=5, pady=5)
+        # Ensure the box expands with the frame in the x axis
+        self.frame_note.columnconfigure(0, weight=1)
+        self.frame_note.rowconfigure(0, weight=1)
+
+
+    '''
+    Function Description: Defines widgets for each frame
+    '''
+    def create_widgets(self):
+
+        '''
+        Widget Positions (y,x coordinate in main window)
+        '''
+        # For sessions frame
+        pos_session_entrybox = 0,0
+        pos_new_session_button = 1,0
+
+        # For configuration frame
+        pos_config_dropdown = 0,0
+        pos_new_config_button = 1,0
+
+        pos_config_continous_label = 0,1
+        pos_config_fstart_label = 0,2
+        pos_config_fstop_label = 0,3
+        pos_config_rbw_label = 0,4
+        pos_config_vbw_label = 0,5
+        pos_config_amp_label = 0,6
+        pos_config_atten_label = 0,7
+        pos_config_detector_label = 0,8
+        pos_config_emifilter_label = 0,9
+        pos_config_sweeppoints_label = 0,10
+        pos_config_sweepcount_label = 0,11
+        pos_config_tracemode_label = 0,12
+        pos_config_unit_label = 0,13
+        pos_config_offset_label = 0,14
+        pos_config_step_label = 0,15
+        pos_config_xscale_label = 0,16
+
+        pos_config_continous_textbox = 1,1
+        pos_config_fstart_textbox = 1,2
+        pos_config_fstop_textbox = 1,3
+        pos_config_rbw_textbox = 1,4
+        pos_config_vbw_textbox = 1,5
+        pos_config_amp_textbox = 1,6
+        pos_config_atten_textbox = 1,7
+        pos_config_detector_textbox = 1,8
+        pos_config_emifilter_textbox = 1,9
+        pos_config_sweeppoints_textbox = 1,10
+        pos_config_sweepcount_textbox = 1,11
+        pos_config_tracemode_textbox = 1,12
+        pos_config_unit_textbox = 1,13
+        pos_config_offset_textbox = 1,14
+        pos_config_step_textbox = 1,15
+        pos_config_xscale_textbox = 1,16
+
+        # For buttons frame
+        pos_new_measurement_button = 0,0
+        pos_save_measurement_button = 0,1
+        pos_export_graph_button = 0,2
+
+        # For peaks configuration frame
+        pos_lags_button = 0,0
+        pos_threshold_button = 0,1
+        pos_influence_button = 0,2
+
+        '''
+        Widget Definitions
+        '''
+        '''frame_directory'''
+        self.session_entry_box = define_entry_textbox(self.window, pos_session_entrybox[0], 
+                                                      pos_session_entrybox[1], sticky=N)
+        
+        session_new_button = define_button(self.window, pos_new_session_button[0],
+                                                pos_new_session_button[1], text="New Session", sticky=N)
+
+        '''frame_Config'''
+        # Need to get the list of configurations here somehow
+        config_list = ""
+        self.config_dropdown = define_drop_down(self.window, pos_config_dropdown[0], 
+                                                pos_config_dropdown[1], content_list=config_list)
+        config_new_button = define_button(self.window, pos_new_config_button[0], 
+                                          pos_new_config_button[1], text="New Config", sticky=NSEW)
+        
+        config_continous_label = define_label(self.window, pos_config_continous_label[0],
+                                              pos_config_continous_label[1], text="continous")
+        config_fstart_label = define_label(self.window, pos_config_fstart_label[0],
+                                                pos_config_fstart_label[1], text="fstart")
+        config_fstop_label = define_label(self.window, pos_config_fstop_label[0], 
+                                              pos_config_fstop_label[1], text="fstop")
+        config_rbw_label = define_label(self.window, pos_config_rbw_label[0], 
+                                        pos_config_rbw_label[1], text="rbw")
+        config_vbw_label = define_label(self.window, pos_config_vbw_label[0], 
+                                        pos_config_vbw_label[1], text="vbw")
+        config_amp_label = define_label(self.window, pos_config_amp_label[0],
+                                        pos_config_amp_label[1], text="amp")
+        config_atten_label = define_label(self.window, pos_config_atten_label[0],
+                                          pos_config_atten_label[1], text="atten")
+        config_detector_label = define_label(self.window, pos_config_detector_label[0], 
+                                             pos_config_detector_label[1], text='detector')
+        config_emifilter_label = define_label(self.window, pos_config_emifilter_label[0], 
+                                              pos_config_emifilter_label[1], text='emifilter')
+        config_sweeppoints_label = define_label(self.window, pos_config_sweeppoints_label[0],
+                                                pos_config_sweeppoints_label[1], text="sweep points")
+        config_sweepcount_label = define_label(self.window, pos_config_sweepcount_label[0],
+                                               pos_config_sweepcount_label[1], text="sweepcount") 
+        config_tracemode_label = define_label(self.window, pos_config_tracemode_label[0],
+                                              pos_config_tracemode_label[1], text="tracemode")
+        config_unit_label = define_label(self.window, pos_config_unit_label[0], 
+                                         pos_config_unit_label[1], text="unit")
+        config_offset_label = define_label(self.window, pos_config_offset_label[0], 
+                                           pos_config_offset_label[1], text="offset")
+        config_step_label = define_label(self.window, pos_config_step_label[0], 
+                                         pos_config_step_label[1], text="step")
+        config_xscale_label = define_label(self.window, pos_config_xscale_label[0], 
+                                           pos_config_xscale_label[1], text="xscale")
+        
+        config_continous_textbox = define_entry_textbox(self.window, pos_config_continous_textbox[0],
+                                                        pos_config_continous_textbox[1])
+        config_fstart_textbox = define_entry_textbox(self.window, pos_config_fstart_textbox[0],
+                                                     pos_config_fstart_textbox[1])
+        config_fstop_textbox = define_entry_textbox(self.window, pos_config_fstop_textbox[0],
+                                                    pos_config_fstop_textbox[1])
+        config_rbw_textbox = define_entry_textbox(self.window, pos_config_rbw_textbox[0],
+                                                  pos_config_rbw_textbox[1])
+        config_vbw_textbox = define_entry_textbox(self.window, pos_config_vbw_textbox[0],
+                                                  pos_config_vbw_textbox[1])
+        config_amp_textbox = define_entry_textbox(self.window, pos_config_amp_textbox[0],
+                                                  pos_config_amp_textbox[1])
+        config_atten_textbox = define_entry_textbox(self.window, pos_config_atten_textbox[0],
+                                                    pos_config_atten_textbox[1])
+        config_detector_textbox = define_entry_textbox(self.window, pos_config_detector_textbox[0],
+                                                       pos_config_detector_textbox[1])
+        config_emifilter_textbox = define_entry_textbox(self.window, pos_config_emifilter_textbox[0],
+                                                        pos_config_emifilter_textbox[1])
+        config_sweeppoints_textbox = define_entry_textbox(self.window, pos_config_sweeppoints_textbox[0],
+                                                          pos_config_sweeppoints_textbox[1])
+        config_sweepcount_textbox = define_entry_textbox(self.window, pos_config_sweepcount_textbox[0],
+                                                         pos_config_sweepcount_textbox[1])
+        config_tracemode_textbox = define_entry_textbox(self.window, pos_config_tracemode_textbox[0],
+                                                        pos_config_tracemode_textbox[1])
+        config_unit_textbox = define_entry_textbox(self.window, pos_config_unit_textbox[0],
+                                                   pos_config_unit_textbox[1])
+        config_offset_textbox = define_entry_textbox(self.window, pos_config_offset_textbox[0],
+                                                     pos_config_offset_textbox[1])
+        config_step_textbox = define_entry_textbox(self.window, pos_config_step_textbox[0],
+                                                   pos_config_step_textbox[1])
+        config_xscale_textbox = define_entry_textbox(self.window, pos_config_xscale_textbox[0],
+                                                     pos_config_xscale_textbox[1])
+        
+        # Button Frame
+        new_measurement_button = define_button(self.window, pos_new_measurement_button[0],
+                                               pos_new_measurement_button[1])
+        save_measurement_button = define_button(self.window, pos_save_measurement_button[0],
+                                                pos_save_measurement_button[1])
+        export_graph_button = define_button(self.window, pos_export_graph_button[0],
+                                            pos_export_graph_button[1])
+        
+        # Peaks config frame
+        lags_button = define_button(self.window, pos_lags_button[0], pos_lags_button[1])
+        threshold_button = define_button(self.window, pos_threshold_button[0], 
+                                         pos_threshold_button[1])
+        influence_button = define_button(self.window, pos_influence_button[0],
+                                         pos_influence_button[1])
+
+    '''
+    Function Description: Defines a new window called when the new session
+    button is clicked. Allows user to save a new session file and add
+    a description of the new session being started
+    '''        
+    def create_save_session_window(self):
         pass
 
+    '''
+    Function Description: Defines a new window called when the new configuration button
+    is pressed. Allows user to fill a new configuration which is saved.
+    '''
+    def create_add_config_window(self):
+        pass
+
+        
 # Generates a session plot window
 class plot_session():
 
@@ -363,12 +648,8 @@ class plot_session():
         # Init class variables
         self.window = window            # Parent window
         self.entry_directory = None     # folder directory textbox
-        self.button_directory = None    # Folder search button
         self.tree_json = None           # tree shows available json files
         self.tree_measurement = None    # tree for measurements in each jason file
-        self.button_moveright = None    # Button to select measurements 
-        self.button_moveleft = None     # Button to deselect measurements
-        self.button_plot = None         # Plot selected measurements
         self.selection_tree = None      # Tree for measurements selected 
         
         self.curr_directory = os.getcwd()   # Get current directory
@@ -389,7 +670,7 @@ class plot_session():
         Frame Definitions
         '''
         # Generate GUI window
-        #self.window = ttk_b.Window(themename = theme["default"])
+        # self.window = ttk_b.Window(themename = theme["default"])
         # Define window size
         self.window.geometry(str(sizex) + 'x' + str(sizey))
         # Set title for window
@@ -618,7 +899,7 @@ class plot_session():
         # Ensure the frame expands across all columns
         self.frame_directory.grid(columnspan=4)
 
-        # Define parent directory frame at the top
+        # Define metadata frame at the top
         self.frame_metadata = define_frame(self.window, pos_metadata_frame[0], pos_metadata_frame[1], NSEW)
         # Add some spacing
         self.frame_metadata.grid(padx=5, pady=5)
@@ -696,7 +977,7 @@ class plot_session():
         # Generate Widgets for each frame and assign functions as required
         '''frame_directory widgets'''
         self.entry_directory = define_entry_textbox(self.frame_directory, pos_directory_entrybox[0], pos_directory_entrybox[1], width=10, sticky=NSEW)
-        self.button_directory = define_button(self.frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
+        button_directory = define_button(self.frame_directory, pos_directory_button[0], pos_directory_button[1], "Browse", self.update_directory)
 
         '''frame_metadata widgets'''
         self.entry_metadata = define_scroll_textbox(self.frame_metadata, pos_metadata_scrollbox[0], pos_metadata_scrollbox[1], 
@@ -716,22 +997,19 @@ class plot_session():
 
         '''frame_buttons widgets'''
         define_label(self.frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
-        self.button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", function_call=self.rb_pressed, sticky=NSEW)
-        self.button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", function_call=self.lb_pressed, sticky=NSEW)
-        self.button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", function_call=self.pltb_pressed, sticky=NSEW)
-        self.button_plot =    define_button(self.frame_buttons, pos_clear_button[0], pos_clear_button[1], "Clear", function_call=self.clrb_pressed, sticky=NSEW)
+        button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", function_call=self.rb_pressed, sticky=NSEW)
+        button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", function_call=self.lb_pressed, sticky=NSEW)
+        button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", function_call=self.pltb_pressed, sticky=NSEW)
+        button_clear =    define_button(self.frame_buttons, pos_clear_button[0], pos_clear_button[1], "Clear", function_call=self.clrb_pressed, sticky=NSEW)
 
         '''frame_selection widgets'''
         define_label(self.frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
         self.tree_selection = define_treeview(self.frame_selection, pos_selection_tree[0], pos_selection_tree[1], sticky=NSEW)
         self.tree_selection.config(columns=('Selection'))
 
-    #def destroy(self):
-    #    for widet in self.window.winfo_children():
-    #        Widget.destroy()
-    #    self.destroy()
-
- # Generate GUI window
+# Generate GUI window
 window = ttk_b.Window(themename = theme["default"])
-plot_session(window)
+# Modify window for measure session 
+measure_session(window)
+# Run mainloop
 window.mainloop()

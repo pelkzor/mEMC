@@ -457,10 +457,10 @@ def meas_instr():
     dev = DSA832()      # Create device object
     Session(dev, input("Savefile Name: "), input("Test Description:")).begin()
 
-def meas_plot():
-    files = list_json_files()
-    selection = int(input("Select file to plot: "))
-    plot_measured(files[selection])
+#def meas_plot():
+#    files = list_json_files()
+#    selection = int(input("Select file to plot: "))
+#    plot_measured(meas[selection])
 
 #meas_plot()
 #meas_instr()
