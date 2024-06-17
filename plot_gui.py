@@ -9,7 +9,14 @@ from tkinter import ttk
 from multiprocessing import process
 import sys
 
+'''
+Add name of measurement. "name" field to be added.display in measure list box
+'''
+
 import emc
+
+'''Constants'''
+MAX_POSSIBLE_MEASUREMENTS = 1000
 
 '''Global Variables'''
 settings_dir_path = ".settings"   # Saves the folder and file to store settings in
@@ -474,56 +481,56 @@ class measure_session():
         Widget Positions (y,x coordinate in main window)
         '''
         # For sessions frame
-        pos_session_entrybox = 0,0
-        pos_new_session_button = 1,0
+        pos_session_entrybox                = 0,0
+        pos_new_session_button              = 1,0
 
         # For configuration frame
-        pos_config_dropdown = 0,0
-        pos_new_config_button = 1,0
+        pos_config_dropdown                 = 0,0
+        pos_new_config_button               = 1,0
 
-        pos_config_continous_label = 0,1
-        pos_config_fstart_label = 0,2
-        pos_config_fstop_label = 0,3
-        pos_config_rbw_label = 0,4
-        pos_config_vbw_label = 0,5
-        pos_config_amp_label = 0,6
-        pos_config_atten_label = 0,7
-        pos_config_detector_label = 0,8
-        pos_config_emifilter_label = 0,9
-        pos_config_sweeppoints_label = 0,10
-        pos_config_sweepcount_label = 0,11
-        pos_config_tracemode_label = 0,12
-        pos_config_unit_label = 0,13
-        pos_config_offset_label = 0,14
-        pos_config_step_label = 0,15
-        pos_config_xscale_label = 0,16
+        pos_config_continous_label          = 0,1
+        pos_config_fstart_label             = 0,2
+        pos_config_fstop_label              = 0,3
+        pos_config_rbw_label                = 0,4
+        pos_config_vbw_label                = 0,5
+        pos_config_amp_label                = 0,6
+        pos_config_atten_label              = 0,7
+        pos_config_detector_label           = 0,8
+        pos_config_emifilter_label          = 0,9
+        pos_config_sweeppoints_label        = 0,10
+        pos_config_sweepcount_label         = 0,11
+        pos_config_tracemode_label          = 0,12
+        pos_config_unit_label               = 0,13
+        pos_config_offset_label             = 0,14
+        pos_config_step_label               = 0,15
+        pos_config_xscale_label             = 0,16
 
-        pos_config_continous_textbox = 1,1
-        pos_config_fstart_textbox = 1,2
-        pos_config_fstop_textbox = 1,3
-        pos_config_rbw_textbox = 1,4
-        pos_config_vbw_textbox = 1,5
-        pos_config_amp_textbox = 1,6
-        pos_config_atten_textbox = 1,7
-        pos_config_detector_textbox = 1,8
-        pos_config_emifilter_textbox = 1,9
-        pos_config_sweeppoints_textbox = 1,10
-        pos_config_sweepcount_textbox = 1,11
-        pos_config_tracemode_textbox = 1,12
-        pos_config_unit_textbox = 1,13
-        pos_config_offset_textbox = 1,14
-        pos_config_step_textbox = 1,15
-        pos_config_xscale_textbox = 1,16
+        pos_config_continous_textbox        = 1,1
+        pos_config_fstart_textbox           = 1,2
+        pos_config_fstop_textbox            = 1,3
+        pos_config_rbw_textbox              = 1,4
+        pos_config_vbw_textbox              = 1,5
+        pos_config_amp_textbox              = 1,6
+        pos_config_atten_textbox            = 1,7
+        pos_config_detector_textbox         = 1,8
+        pos_config_emifilter_textbox        = 1,9
+        pos_config_sweeppoints_textbox      = 1,10
+        pos_config_sweepcount_textbox       = 1,11
+        pos_config_tracemode_textbox        = 1,12
+        pos_config_unit_textbox             = 1,13
+        pos_config_offset_textbox           = 1,14
+        pos_config_step_textbox             = 1,15
+        pos_config_xscale_textbox           = 1,16
 
         # For buttons frame
-        pos_new_measurement_button = 0,0
-        pos_save_measurement_button = 0,1
-        pos_export_graph_button = 0,2
+        pos_new_measurement_button          = 0,0
+        pos_save_measurement_button         = 0,1
+        pos_export_graph_button             = 0,2
 
         # For peaks configuration frame
-        pos_lags_button = 0,0
-        pos_threshold_button = 0,1
-        pos_influence_button = 0,2
+        pos_lags_button                     = 0,0
+        pos_threshold_button                = 0,1
+        pos_influence_button                = 0,2
 
         '''
         Widget Definitions
@@ -654,13 +661,20 @@ class plot_session():
         
         self.curr_directory = os.getcwd()   # Get current directory
 
+        # Used for listing files
         self.json_files = []    # List of dictionaries of filenames and paths   {"filename", "filepath"}
         self.json_file_selected = {} # Dictionary of selected filename and path   {"filename", "filepath"}   
+
+        # saves actual data of json files selected by user in list
         self.selected_json_data = {}   # Dictionary of current select json file data.
-        # Dictionary of selected measurements data from selected json file 
+        
+        # List of actual data of measurements selected by user in GUI
+        # List of selected measurements data from selected json file 
         # {Sig_Level, Frequency, Note, Configuration, TimeStamp, Name, JSON_filename}
-        self.selected_measurement = []    
-        self.to_plot = []       # List of measurement to plot
+        self.selected_measurement = []   
+        # Measurement selected in the selection tree by the user in GUI 
+        self.selected_selection_tree = []  
+        self.to_plot = []   # List of measurements to plot
 
         # Parent window size
         sizex = 1490
@@ -757,8 +771,9 @@ class plot_session():
         for item in self.tree_measurement.get_children():
             self.tree_measurement.delete(item) 
         # Iterate through the json file for each measure keyword until none are left
-        for i in range(100):
+        for i in range(MAX_POSSIBLE_MEASUREMENTS):
             measure_key = f"measure{i}"
+            '''
             # Search for measurement key in json file
             measurement = self.selected_json_data.get(measure_key, "Nonexistent")
             # Return nonexisent keyword if not found
@@ -767,6 +782,11 @@ class plot_session():
                 break
             # List on measurement tree
             self.tree_measurement.insert('',END, values=measure_key)
+            '''
+            for key in self.selected_json_data:
+                if measure_key in key:
+                    self.tree_measurement.insert('', END, values=key)
+                    
 
     '''
     Function Description: Called when a measurement is selected in the
@@ -795,6 +815,8 @@ class plot_session():
             self.selected_measurement.append(self.selected_json_data[item_name])
             # Append name of the measurement
             self.selected_measurement[-1]["Name"] = item_name
+            # Append treeview id of the measurement
+            self.selected_measurement[-1]["id"] = item
             # Append name of json file
             self.selected_measurement[-1]['JSON_Name'] = self.json_file_selected["filename"].replace(".json",'')
 
@@ -806,6 +828,34 @@ class plot_session():
         self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement[-1]["Note"]}\n')
         self.entry_metadata.config(state='disabled')
         
+    
+    def selection_selected(self, event):
+
+        # Clear previous selection
+        self.selected_selection_tree = []
+        
+        # Get list of items selected
+        selected_items = self.tree_selection.selection()
+        # Check if no item selected
+        if not selected_items:
+            return
+        
+        # Iterate through selected items in selection tree
+        # and append to lsit of selected items in selection tree
+        for item in selected_items:
+            # Highlight selection
+            self.tree_selection.item(item, tags=("highlight",))
+            # Convert item ID to item name
+            item_name = self.tree_selection.item(item)["values"][0]
+            # Removed Json file name attached to measurement name
+            item_name = item_name.replace(f"{self.json_file_selected["filename"].replace(".json","")}/", "")
+            # Temporarily save measurement data
+            self.selected_selection_tree.append(self.selected_json_data[item_name])
+            # Append name of the measurement
+            self.selected_selection_tree[-1]["Name"] = item_name
+            # Append treeview id of the measurement
+            self.selected_selection_tree[-1]["id"] = item
+
     '''
     Function Description: Called when the right button is pressed. Moves selected items from measurement tree
             to selection tree. Appends associated measurement objects to list to be plotted
@@ -831,25 +881,12 @@ class plot_session():
     '''
     def lb_pressed(self):
 
-        # Delete measurement selected in selection tree
-        # Get list of measurements already in selection tree
-        existing_items = []
-        for item in self.tree_selection.get_children():
-            # Append a dictionary containing the item name and id
-            existing_items.append({"item_name" : self.tree_selection.item(item)["values"][0], "id" : item})
-
-        # iterate through measurements selected in measurement tree
-        for meas in self.selected_measurement:
-            meas_name = f'{meas["JSON_Name"].replace(".json",'')}/{meas["Name"]}'
-            # Iterate through items in selection tree
-            for item in existing_items:
-                # Check if there is a name match between selection in measurement tree
-                # and items in selection tree
-                if meas_name in item["item_name"]:
-                    # Remove from seletion tree
-                    self.tree_selection.delete(item["id"])
-                    # Remove measurement data from plotting dictionary
-                    self.to_plot.remove(meas)
+        # iterate through measurements selected in selection tree
+        for meas in self.selected_selection_tree:
+            # Delete from selection tree
+            self.tree_selection.delete(meas["id"])
+            # Remove measurement data from plotting dictionary
+            self.to_plot.remove(meas)
 
     '''
     Function Description: Called when plot button is pressed. Plots list of measurement objects in selection
@@ -987,12 +1024,14 @@ class plot_session():
         define_label(self.frame_json, pos_session_label[0], pos_session_label[1], "Session", sticky=N)
         self.tree_json = define_treeview(self.frame_json, pos_session_tree[0], pos_session_tree[1], sticky=NSEW)
         self.tree_json.config(columns=('Filename'))
+        # Called when user selects a json file in the sessions tree
         self.tree_json.bind('<<TreeviewSelect>>', self.json_selected)
 
         '''frame_measurement widgets'''
         define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
         self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_tree[0], pos_measurement_tree[1], selectmode='extended', sticky=NSEW)
         self.tree_measurement.config(columns=('Measurement'))
+        # Called when user selections measurements in the measurement tree
         self.tree_measurement.bind('<<TreeviewSelect>>', self.measurement_selected)
 
         '''frame_buttons widgets'''
@@ -1004,8 +1043,11 @@ class plot_session():
 
         '''frame_selection widgets'''
         define_label(self.frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
-        self.tree_selection = define_treeview(self.frame_selection, pos_selection_tree[0], pos_selection_tree[1], sticky=NSEW)
+        self.tree_selection = define_treeview(self.frame_selection, pos_selection_tree[0], pos_selection_tree[1], sticky=NSEW, selectmode='extended')
         self.tree_selection.config(columns=('Selection'))
+        # Call when the user selects measurements in the selection tree
+        self.tree_selection.bind('<<TreeviewSelect>>', self.selection_selected)
+
 
 # Generate GUI window
 window = ttk_b.Window(themename = theme["default"])

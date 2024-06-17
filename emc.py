@@ -420,7 +420,7 @@ def plot(measurements, ref=None, peaklist = None):
 
 def list_json_files(directory = ''):
 
-    json_files = []              # list of validjson dictionaries
+    json_files = []              # list of valid json dictionaries
     if directory == '':
         # Use glob to find all JSON files in the current folder
         # If no directory is provided
