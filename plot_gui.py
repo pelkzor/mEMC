@@ -6,8 +6,8 @@ from tkinter import scrolledtext        # Import tkinter module for scroll text 
 from tkinter import *                   # Import all tkinter modules
 from tkinter import filedialog          
 from tkinter import ttk
-from multiprocessing import process
-import sys
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 '''
 Add name of measurement. "name" field to be added.display in measure list box
@@ -66,10 +66,10 @@ Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/combobox
 
 Return: drop down object
 '''
-def define_drop_down(container, position_y, position_x, content_list, default_state = 'normal', 
-                     theme = 'default', sticky=None):
+def define_drop_down(container, position_y = 0, position_x = 0, content_list = None, default_state = 'normal', 
+                     theme = 'default', sticky=None, width = 30):
 
-    menu = ttk_b.Combobox(container, value=content_list, state=default_state, bootstyle = theme)
+    menu = ttk_b.Combobox(container, value=content_list, state=default_state, bootstyle = theme, width=width)
     menu.grid(column=position_y, row=position_x, padx=1, pady=1, sticky=sticky)
 
     return menu
@@ -267,19 +267,28 @@ def create_menubar(window):
     return menu_bar
 
 
+def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", ylabel = "y-axis", title = "Plot"):
+    # Create a Matplotlib figure and plot
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    # Create a canvas and add the figure to it
+    canvas = FigureCanvasTkAgg(fig, master=container)
+    canvas.draw()
+    canvas.get_tk_widget().grid(row=position_x, column=position_y, sticky=sticky)
+
+    return canvas, ax
+
 '''
 Function Description: Alterate between modes (Plot vs Measurement)
 '''
 def switch_mode_plot(window):
-    # Clear current window
-    for widget in window.winfo_children():
-        widget.destroy()
     plot_session(window)
 
 def switch_mode_measure(window):
-    # Clear current window
-    for widget in window.winfo_children():
-        widget.destroy()
     measure_session(window)
 
 '''
@@ -374,10 +383,9 @@ class measure_session():
         self.session_entry_box = None
         self.config_dropdown = None
                 
-
         # Parent window size
         sizex = 1490
-        sizey = 600
+        sizey = 900
 
         '''
         Frame Definitions
@@ -387,7 +395,26 @@ class measure_session():
         self.window.geometry(str(sizex) + 'x' + str(sizey))
         # Set title for window
         self.window.title("EMC_Sessions_Measurements")
+
+        # Clear previous window configurations
+        # Clear widgets
+        #for widget in window.winfo_children():
+            #widget.grid_forget()
+            #widget.destroy()
+        list = self.window.grid_slaves()
+        for l in list:
+            l.grid_forget()
+            l.destroy()
+
+
         # Ensure display frame expands with window as required
+        #self.window.columnconfigure(0, weight=1)
+        #self.window.columnconfigure(1, weight=1)
+        self.window.columnconfigure(2, weight=1)
+        self.window.rowconfigure(0, weight=1)
+        self.window.rowconfigure(1, weight=1)
+        self.window.rowconfigure(2, weight=1)
+        #self.window.rowconfigure(2, weight=1)
 
         # Create a menu Bar
         create_menubar(self.window)
@@ -400,7 +427,7 @@ class measure_session():
         # load current directory in textbox
         #self.entry_directory.insert(END,self.curr_directory)
 
-        self.window.mainloop()
+        #self.window.mainloop()
 
     '''
     Function Description: Generate required frames for GUI
@@ -411,7 +438,7 @@ class measure_session():
         Frame Position values (y,x coordinate in main window)
         '''
         pos_directory_frame     = 0,0
-        pos_graph_frame         = 2,0
+        pos_graph_frame         = 2,1
         pos_button_frame        = 1,1
         pos_config_frame        = 0,1
         pos_peaks_config_frame  = 1,2
@@ -426,17 +453,22 @@ class measure_session():
         self.frame_directory.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_directory.columnconfigure(0, weight=1)
-        self.frame_directory.rowconfigure(0, weight=1)
+        #self.frame_directory.rowconfigure(0, weight=1)
         # Ensure the frame expands across columns
         self.frame_directory.grid(columnspan=2)
-
+        
         # Define config directory frame
         self.frame_config = define_frame(self.window, pos_config_frame[0], pos_config_frame[1], NSEW)
         # Add some spacing
         self.frame_config.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
-        self.frame_config.columnconfigure(0, weight=1)
         self.frame_config.rowconfigure(0, weight=1)
+        #self.frame_config.columnconfigure(1, weight=1)
+        # Have it cover 2 x-coordinates
+        self.frame_config.grid(rowspan=2)
+        # Add a boundary
+        self.frame_config.config(relief=SOLID, padding=5)
+    
 
         # Define peaks configuration frame
         self.frame_peaks_config = define_frame(self.window, pos_peaks_config_frame[0], 
@@ -445,15 +477,13 @@ class measure_session():
         self.frame_peaks_config.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_peaks_config.columnconfigure(0, weight=1)
-        self.frame_peaks_config.rowconfigure(0, weight=1)
         
         # Define button configuration frame
-        self.frame_buttons = define_frame(self.window, pos_button_frame[0], pos_button_frame[1], NSEW)
+        self.frame_buttons = define_frame(self.window, pos_button_frame[0], pos_button_frame[1], N)
         # Add some spacing
         self.frame_buttons.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_buttons.columnconfigure(0, weight=1)
-        self.frame_buttons.rowconfigure(0, weight=1)
         
         # Define graph frame
         self.frame_graph = define_frame(self.window, pos_graph_frame[0], pos_graph_frame[1], NSEW)
@@ -462,6 +492,8 @@ class measure_session():
         # Ensure the box expands with the frame in the x axis
         self.frame_graph.columnconfigure(0, weight=1)
         self.frame_graph.rowconfigure(0, weight=1)
+        # Ensure the frame expands across rows
+        self.frame_directory.grid(rowspan=3)
         
         # Define notes frame
         self.frame_note = define_frame(self.window, pos_notes_frame[0], pos_notes_frame[1], NSEW)
@@ -470,6 +502,10 @@ class measure_session():
         # Ensure the box expands with the frame in the x axis
         self.frame_note.columnconfigure(0, weight=1)
         self.frame_note.rowconfigure(0, weight=1)
+        self.frame_note.columnconfigure(1, weight=1)
+        self.frame_note.rowconfigure(1, weight=1)
+        # Ensure the frame expands across columns
+        #self.frame_directory.grid(columnspan=2)
 
 
     '''
@@ -485,9 +521,10 @@ class measure_session():
         pos_new_session_button              = 1,0
 
         # For configuration frame
-        pos_config_dropdown                 = 0,0
-        pos_new_config_button               = 1,0
+        pos_config_dropdown                 = 1,0
+        pos_new_config_button               = 2,0
 
+        pos_config_label                    = 0,0
         pos_config_continous_label          = 0,1
         pos_config_fstart_label             = 0,2
         pos_config_fstop_label              = 0,3
@@ -528,108 +565,139 @@ class measure_session():
         pos_export_graph_button             = 0,2
 
         # For peaks configuration frame
-        pos_lags_button                     = 0,0
-        pos_threshold_button                = 0,1
-        pos_influence_button                = 0,2
+        pos_lags_label                        = 0,0
+        pos_threshold_label                   = 0,1
+        pos_influence_label                   = 0,2
+        pos_lags_entrybox                     = 1,0
+        pos_threshold_entrybox                = 1,1
+        pos_influence_entrybox                = 1,2
+
+        # For notes frame
+        pos_name_label                        = 0,0
+        pos_note_label                        = 0,1
+        pos_name_entrybox                     = 1,0
+        pos_note_entrybox                     = 1,1
+        
+
 
         '''
         Widget Definitions
         '''
         '''frame_directory'''
-        self.session_entry_box = define_entry_textbox(self.window, pos_session_entrybox[0], 
-                                                      pos_session_entrybox[1], sticky=N)
+        self.session_entry_box = define_entry_textbox(self.frame_directory, pos_session_entrybox[0], 
+                                                      pos_session_entrybox[1], width=50, sticky=NSEW)
         
-        session_new_button = define_button(self.window, pos_new_session_button[0],
-                                                pos_new_session_button[1], text="New Session", sticky=N)
+        session_new_button = define_button(self.frame_directory, pos_new_session_button[0],
+                                                pos_new_session_button[1], text="New Session", sticky=NSEW)
 
         '''frame_Config'''
         # Need to get the list of configurations here somehow
         config_list = ""
-        self.config_dropdown = define_drop_down(self.window, pos_config_dropdown[0], 
-                                                pos_config_dropdown[1], content_list=config_list)
-        config_new_button = define_button(self.window, pos_new_config_button[0], 
-                                          pos_new_config_button[1], text="New Config", sticky=NSEW)
+        self.config_dropdown = define_drop_down(self.frame_config, pos_config_dropdown[0], 
+                                                pos_config_dropdown[1], content_list=config_list, sticky=NW)
+        config_new_button = define_button(self.frame_config, pos_new_config_button[0], 
+                                          pos_new_config_button[1], text="New Config", sticky=NW)
         
-        config_continous_label = define_label(self.window, pos_config_continous_label[0],
-                                              pos_config_continous_label[1], text="continous")
-        config_fstart_label = define_label(self.window, pos_config_fstart_label[0],
-                                                pos_config_fstart_label[1], text="fstart")
-        config_fstop_label = define_label(self.window, pos_config_fstop_label[0], 
-                                              pos_config_fstop_label[1], text="fstop")
-        config_rbw_label = define_label(self.window, pos_config_rbw_label[0], 
-                                        pos_config_rbw_label[1], text="rbw")
-        config_vbw_label = define_label(self.window, pos_config_vbw_label[0], 
-                                        pos_config_vbw_label[1], text="vbw")
-        config_amp_label = define_label(self.window, pos_config_amp_label[0],
-                                        pos_config_amp_label[1], text="amp")
-        config_atten_label = define_label(self.window, pos_config_atten_label[0],
-                                          pos_config_atten_label[1], text="atten")
-        config_detector_label = define_label(self.window, pos_config_detector_label[0], 
-                                             pos_config_detector_label[1], text='detector')
-        config_emifilter_label = define_label(self.window, pos_config_emifilter_label[0], 
-                                              pos_config_emifilter_label[1], text='emifilter')
-        config_sweeppoints_label = define_label(self.window, pos_config_sweeppoints_label[0],
-                                                pos_config_sweeppoints_label[1], text="sweep points")
-        config_sweepcount_label = define_label(self.window, pos_config_sweepcount_label[0],
-                                               pos_config_sweepcount_label[1], text="sweepcount") 
-        config_tracemode_label = define_label(self.window, pos_config_tracemode_label[0],
-                                              pos_config_tracemode_label[1], text="tracemode")
-        config_unit_label = define_label(self.window, pos_config_unit_label[0], 
-                                         pos_config_unit_label[1], text="unit")
-        config_offset_label = define_label(self.window, pos_config_offset_label[0], 
-                                           pos_config_offset_label[1], text="offset")
-        config_step_label = define_label(self.window, pos_config_step_label[0], 
-                                         pos_config_step_label[1], text="step")
-        config_xscale_label = define_label(self.window, pos_config_xscale_label[0], 
-                                           pos_config_xscale_label[1], text="xscale")
+
+        config_label = define_label(self.frame_config, pos_config_label[0], pos_config_label[1], text="Configuration", sticky=NSEW)
+        config_continous_label = define_label(self.frame_config, pos_config_continous_label[0],
+                                              pos_config_continous_label[1], text="continous", sticky=NSEW)
+        config_fstart_label = define_label(self.frame_config, pos_config_fstart_label[0],
+                                                pos_config_fstart_label[1], text="fstart", sticky=NSEW)
+        config_fstop_label = define_label(self.frame_config, pos_config_fstop_label[0], 
+                                              pos_config_fstop_label[1], text="fstop", sticky=NSEW)
+        config_rbw_label = define_label(self.frame_config, pos_config_rbw_label[0], 
+                                        pos_config_rbw_label[1], text="rbw", sticky=NSEW)
+        config_vbw_label = define_label(self.frame_config, pos_config_vbw_label[0], 
+                                        pos_config_vbw_label[1], text="vbw", sticky=NSEW)
+        config_amp_label = define_label(self.frame_config, pos_config_amp_label[0],
+                                        pos_config_amp_label[1], text="amp", sticky=NSEW)
+        config_atten_label = define_label(self.frame_config, pos_config_atten_label[0],
+                                          pos_config_atten_label[1], text="atten", sticky=NSEW)
+        config_detector_label = define_label(self.frame_config, pos_config_detector_label[0], 
+                                             pos_config_detector_label[1], text='detector', sticky=NSEW)
+        config_emifilter_label = define_label(self.frame_config, pos_config_emifilter_label[0], 
+                                              pos_config_emifilter_label[1], text='emifilter', sticky=NSEW)
+        config_sweeppoints_label = define_label(self.frame_config, pos_config_sweeppoints_label[0],
+                                                pos_config_sweeppoints_label[1], text="sweep points", sticky=NSEW)
+        config_sweepcount_label = define_label(self.frame_config, pos_config_sweepcount_label[0],
+                                               pos_config_sweepcount_label[1], text="sweepcount", sticky=NSEW) 
+        config_tracemode_label = define_label(self.frame_config, pos_config_tracemode_label[0],
+                                              pos_config_tracemode_label[1], text="tracemode", sticky=NSEW)
+        config_unit_label = define_label(self.frame_config, pos_config_unit_label[0], 
+                                         pos_config_unit_label[1], text="unit", sticky=NSEW)
+        config_offset_label = define_label(self.frame_config, pos_config_offset_label[0], 
+                                           pos_config_offset_label[1], text="offset", sticky=NSEW)
+        config_step_label = define_label(self.frame_config, pos_config_step_label[0], 
+                                         pos_config_step_label[1], text="step", sticky=NSEW)
+        config_xscale_label = define_label(self.frame_config, pos_config_xscale_label[0], 
+                                           pos_config_xscale_label[1], text="xscale", sticky=NSEW)
         
-        config_continous_textbox = define_entry_textbox(self.window, pos_config_continous_textbox[0],
-                                                        pos_config_continous_textbox[1])
-        config_fstart_textbox = define_entry_textbox(self.window, pos_config_fstart_textbox[0],
-                                                     pos_config_fstart_textbox[1])
-        config_fstop_textbox = define_entry_textbox(self.window, pos_config_fstop_textbox[0],
-                                                    pos_config_fstop_textbox[1])
-        config_rbw_textbox = define_entry_textbox(self.window, pos_config_rbw_textbox[0],
-                                                  pos_config_rbw_textbox[1])
-        config_vbw_textbox = define_entry_textbox(self.window, pos_config_vbw_textbox[0],
-                                                  pos_config_vbw_textbox[1])
-        config_amp_textbox = define_entry_textbox(self.window, pos_config_amp_textbox[0],
-                                                  pos_config_amp_textbox[1])
-        config_atten_textbox = define_entry_textbox(self.window, pos_config_atten_textbox[0],
-                                                    pos_config_atten_textbox[1])
-        config_detector_textbox = define_entry_textbox(self.window, pos_config_detector_textbox[0],
-                                                       pos_config_detector_textbox[1])
-        config_emifilter_textbox = define_entry_textbox(self.window, pos_config_emifilter_textbox[0],
-                                                        pos_config_emifilter_textbox[1])
-        config_sweeppoints_textbox = define_entry_textbox(self.window, pos_config_sweeppoints_textbox[0],
-                                                          pos_config_sweeppoints_textbox[1])
-        config_sweepcount_textbox = define_entry_textbox(self.window, pos_config_sweepcount_textbox[0],
-                                                         pos_config_sweepcount_textbox[1])
-        config_tracemode_textbox = define_entry_textbox(self.window, pos_config_tracemode_textbox[0],
-                                                        pos_config_tracemode_textbox[1])
-        config_unit_textbox = define_entry_textbox(self.window, pos_config_unit_textbox[0],
-                                                   pos_config_unit_textbox[1])
-        config_offset_textbox = define_entry_textbox(self.window, pos_config_offset_textbox[0],
-                                                     pos_config_offset_textbox[1])
-        config_step_textbox = define_entry_textbox(self.window, pos_config_step_textbox[0],
-                                                   pos_config_step_textbox[1])
-        config_xscale_textbox = define_entry_textbox(self.window, pos_config_xscale_textbox[0],
-                                                     pos_config_xscale_textbox[1])
+        config_continous_textbox = define_entry_textbox(self.frame_config, pos_config_continous_textbox[0],
+                                                        pos_config_continous_textbox[1], sticky=NSEW)
+        config_fstart_textbox = define_entry_textbox(self.frame_config, pos_config_fstart_textbox[0],
+                                                     pos_config_fstart_textbox[1], sticky=NSEW)
+        config_fstop_textbox = define_entry_textbox(self.frame_config, pos_config_fstop_textbox[0],
+                                                    pos_config_fstop_textbox[1], sticky=NSEW)
+        config_rbw_textbox = define_entry_textbox(self.frame_config, pos_config_rbw_textbox[0],
+                                                  pos_config_rbw_textbox[1], sticky=NSEW)
+        config_vbw_textbox = define_entry_textbox(self.frame_config, pos_config_vbw_textbox[0],
+                                                  pos_config_vbw_textbox[1], sticky=NSEW)
+        config_amp_textbox = define_entry_textbox(self.frame_config, pos_config_amp_textbox[0],
+                                                  pos_config_amp_textbox[1], sticky=NSEW)
+        config_atten_textbox = define_entry_textbox(self.frame_config, pos_config_atten_textbox[0],
+                                                    pos_config_atten_textbox[1], sticky=NSEW)
+        config_detector_textbox = define_entry_textbox(self.frame_config, pos_config_detector_textbox[0],
+                                                       pos_config_detector_textbox[1], sticky=NSEW)
+        config_emifilter_textbox = define_entry_textbox(self.frame_config, pos_config_emifilter_textbox[0],
+                                                        pos_config_emifilter_textbox[1], sticky=NSEW)
+        config_sweeppoints_textbox = define_entry_textbox(self.frame_config, pos_config_sweeppoints_textbox[0],
+                                                          pos_config_sweeppoints_textbox[1], sticky=NSEW)
+        config_sweepcount_textbox = define_entry_textbox(self.frame_config, pos_config_sweepcount_textbox[0],
+                                                         pos_config_sweepcount_textbox[1], sticky=NSEW)
+        config_tracemode_textbox = define_entry_textbox(self.frame_config, pos_config_tracemode_textbox[0],
+                                                        pos_config_tracemode_textbox[1], sticky=NSEW)
+        config_unit_textbox = define_entry_textbox(self.frame_config, pos_config_unit_textbox[0],
+                                                   pos_config_unit_textbox[1], sticky=NSEW)
+        config_offset_textbox = define_entry_textbox(self.frame_config, pos_config_offset_textbox[0],
+                                                     pos_config_offset_textbox[1], sticky=NSEW)
+        config_step_textbox = define_entry_textbox(self.frame_config, pos_config_step_textbox[0],
+                                                   pos_config_step_textbox[1], sticky=NSEW)
+        config_xscale_textbox = define_entry_textbox(self.frame_config, pos_config_xscale_textbox[0],
+                                                     pos_config_xscale_textbox[1], sticky=NSEW)
         
-        # Button Frame
-        new_measurement_button = define_button(self.window, pos_new_measurement_button[0],
-                                               pos_new_measurement_button[1])
-        save_measurement_button = define_button(self.window, pos_save_measurement_button[0],
-                                                pos_save_measurement_button[1])
-        export_graph_button = define_button(self.window, pos_export_graph_button[0],
-                                            pos_export_graph_button[1])
+        ''' Frame button '''
+        new_measurement_button = define_button(self.frame_buttons, pos_new_measurement_button[0],
+                                               pos_new_measurement_button[1], sticky=NSEW, text="New Measurement")
+        save_measurement_button = define_button(self.frame_buttons, pos_save_measurement_button[0],
+                                                pos_save_measurement_button[1], sticky=NSEW, text="Save Masurement")
+        export_graph_button = define_button(self.frame_buttons, pos_export_graph_button[0],
+                                            pos_export_graph_button[1], sticky=NSEW, text="Export Graph")
         
-        # Peaks config frame
-        lags_button = define_button(self.window, pos_lags_button[0], pos_lags_button[1])
-        threshold_button = define_button(self.window, pos_threshold_button[0], 
-                                         pos_threshold_button[1])
-        influence_button = define_button(self.window, pos_influence_button[0],
-                                         pos_influence_button[1])
+        '''Frame peak configuration'''
+        lags_label = define_label(self.frame_peaks_config, pos_lags_label[0], 
+                                           pos_lags_label[1], text="Lags", sticky=NSEW)
+        threshold_label = define_label(self.frame_peaks_config, pos_threshold_label[0], 
+                                         pos_threshold_label[1], text="Threshold", sticky=NSEW)
+        influence_label = define_label(self.frame_peaks_config, pos_influence_label[0], 
+                                           pos_influence_label[1], text="influence", sticky=NSEW)
+        lags_textbox = define_entry_textbox(self.frame_peaks_config, pos_lags_entrybox[0], pos_lags_entrybox[1])
+        threshold_textbox = define_entry_textbox(self.frame_peaks_config, pos_threshold_entrybox[0], 
+                                         pos_threshold_entrybox[1], sticky=NSEW)
+        influence_textbox = define_entry_textbox(self.frame_peaks_config, pos_influence_entrybox[0],
+                                         pos_influence_entrybox[1], sticky=NSEW)
+        
+        '''Frame Note'''
+        note_entrybox = define_entry_textbox(self.frame_note, pos_note_entrybox[0], pos_note_entrybox[1], sticky=NSEW)
+        name_entrybox = define_entry_textbox(self.frame_note, pos_name_entrybox[0], pos_name_entrybox[1], sticky=NSEW)
+
+        note_label = define_label(self.frame_note, pos_note_label[0], pos_note_label[1], sticky=NSEW, text="Note")
+        name_label = define_label(self.frame_note, pos_name_label[0], pos_name_label[1], sticky=NSEW, text="Measurement Name")
+
+        '''Frame Graph'''
+        graph_plot, ax = define_plot(self.frame_graph, sticky=NSEW)
+        # Temp plot for testing
+        ax.plot([1, 2, 3, 4], [10, 20, 25, 30])
 
     '''
     Function Description: Defines a new window called when the new session
@@ -689,6 +757,20 @@ class plot_session():
         self.window.geometry(str(sizex) + 'x' + str(sizey))
         # Set title for window
         self.window.title("EMC_Sessions_Plots")
+
+        # Clear previous window configurations
+        # Iterate over all widgets in the window
+                
+        # Clear widgets
+        #for widget in window.winfo_children():
+            #widget.grid_forget()
+            #widget.destroy()
+        list = self.window.grid_slaves()
+        for l in list:
+            l.grid_forget()
+            l.destroy()
+
+
         # Ensure display frame expands with window as required
         self.window.columnconfigure(0, weight=1)
         self.window.columnconfigure(1, weight=1)
@@ -713,7 +795,7 @@ class plot_session():
         for file in self.json_files:
             self.tree_json.insert('',END, values= file.get("filename"))
 
-        self.window.mainloop()
+        #self.window.mainloop()
     
     '''
     Function Description: return new directory selected by user
@@ -1051,7 +1133,9 @@ class plot_session():
 
 # Generate GUI window
 window = ttk_b.Window(themename = theme["default"])
+window.resizable(1,1)
 # Modify window for measure session 
 measure_session(window)
+#plot_session(window)
 # Run mainloop
 window.mainloop()
