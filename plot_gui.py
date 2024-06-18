@@ -8,7 +8,8 @@ from tkinter import filedialog
 from tkinter import ttk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.widgets import Slider
 '''
 Add name of measurement. "name" field to be added.display in measure list box
 '''
@@ -16,7 +17,8 @@ Add name of measurement. "name" field to be added.display in measure list box
 import emc
 
 '''Constants'''
-MAX_POSSIBLE_MEASUREMENTS = 1000
+MAX_POSSIBLE_MEASUREMENTS   = 1000
+DEFAULT_PADDING             = 5
 
 '''Global Variables'''
 settings_dir_path = ".settings"   # Saves the folder and file to store settings in
@@ -70,7 +72,7 @@ def define_drop_down(container, position_y = 0, position_x = 0, content_list = N
                      theme = 'default', sticky=None, width = 30):
 
     menu = ttk_b.Combobox(container, value=content_list, state=default_state, bootstyle = theme, width=width)
-    menu.grid(column=position_y, row=position_x, padx=1, pady=1, sticky=sticky)
+    menu.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING, sticky=sticky)
 
     return menu
 
@@ -95,7 +97,7 @@ Return: button object
 def define_button(container, position_y = 0, position_x = 0, text = '', function_call = None, default_state = 'normal', theme = 'default', sticky=None):
     
     button = ttk_b.Button(container, text=text, command=function_call, state=default_state, bootstyle=theme)
-    button.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
+    button.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING, sticky=sticky)
 
     return button
 
@@ -117,7 +119,7 @@ Return: button object
 def define_label(container, position_y = 0, position_x = 0, text = '', theme = 'normal', sticky=None):
 
     label = ttk_b.Label(container, text=text, bootstyle=theme)
-    label.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
+    label.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING, sticky=sticky)
     return label
 
 
@@ -142,7 +144,7 @@ def define_checkbox(container, position_y = 0, position_x = 0, text = '', status
 
     checkbox = ttk_b.Checkbutton(container, text=text, variable=status_variable, command=function_call, 
                                  state=default_state, bootstyle=theme)
-    checkbox.grid(column=position_y, row=position_x, padx=2, pady=2)
+    checkbox.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING)
 
     return checkbox
 
@@ -163,7 +165,7 @@ Return: textbox object
 def define_scroll_textbox(container, position_y = 0, position_x = 0, width = None, height = None, default_state = "normal", sticky=None):
 
     scrollbox = scrolledtext.ScrolledText(container, width=width, height=height, state=default_state)
-    scrollbox.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
+    scrollbox.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING, sticky=sticky)
     scrollbox.configure(font=("Times New Roman", 10))
 
     return scrollbox
@@ -187,7 +189,7 @@ Return: entrybox object
 '''
 def define_entry_textbox(container, position_y = 0, position_x = 0, width = 10, state = 'normal', theme = 'default', sticky = None):
     entrybox = ttk_b.Entry(container, width=width, state=state, bootstyle=theme)
-    entrybox.grid(column=position_y, row=position_x, padx=2, pady=2)
+    entrybox.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING)
     entrybox.configure(font=("Times New Roman", 10))
     entrybox.grid(sticky=sticky)
 
@@ -215,7 +217,7 @@ def define_radiobutton(container, position_y = 0, position_x = 0, text = '', sta
     
     radiobutton = ttk_b.Radiobutton(container, text=text, variable=status_variable, command=function_call, 
                                     state=default_state, bootstyle=theme)
-    radiobutton.grid(column=position_y, row=position_x, padx=2, pady=2)
+    radiobutton.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING)
 
     return radiobutton
 
@@ -233,7 +235,7 @@ Note: Refer to https://ttkbootstrap.readthedocs.io/en/version-0.5/widgets/treevi
 def define_treeview(container, position_y = 0, position_x = 0, selectmode = 'browse', sticky=None):
 
     tree = ttk.Treeview(container, show='headings', selectmode=selectmode)
-    tree.grid(column=position_y, row=position_x, padx=2, pady=2, sticky=sticky)
+    tree.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING, sticky=sticky)
     return tree
 
 '''
@@ -267,19 +269,23 @@ def create_menubar(window):
     return menu_bar
 
 
-def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", ylabel = "y-axis", title = "Plot"):
+def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", ylabel = "y-axis", title = "Plot", toolbar = False):
     # Create a Matplotlib figure and plot
     fig = Figure()
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(111, facecolor=(0.0,0.5,1.0,0.1))
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    fig.tight_layout()
 
     # Create a canvas and add the figure to it
     canvas = FigureCanvasTkAgg(fig, master=container)
     canvas.draw()
     canvas.get_tk_widget().grid(row=position_x, column=position_y, sticky=sticky)
-
+    if toolbar == True:
+        toolbar = NavigationToolbar2Tk(canvas, container, pack_toolbar=False)
+        toolbar.update()
+        canvas.get_tk_widget().grid(row=position_x+1, column=position_y, sticky=sticky)
     return canvas, ax
 
 '''
@@ -384,7 +390,7 @@ class measure_session():
         self.config_dropdown = None
                 
         # Parent window size
-        sizex = 1490
+        sizex = 1600
         sizey = 900
 
         '''
@@ -411,9 +417,9 @@ class measure_session():
         #self.window.columnconfigure(0, weight=1)
         #self.window.columnconfigure(1, weight=1)
         self.window.columnconfigure(2, weight=1)
-        self.window.rowconfigure(0, weight=1)
+        #self.window.rowconfigure(0, weight=1)
         self.window.rowconfigure(1, weight=1)
-        self.window.rowconfigure(2, weight=1)
+        #self.window.rowconfigure(2, weight=1)
         #self.window.rowconfigure(2, weight=1)
 
         # Create a menu Bar
@@ -441,69 +447,68 @@ class measure_session():
         pos_graph_frame         = 2,1
         pos_button_frame        = 1,1
         pos_config_frame        = 0,1
-        pos_peaks_config_frame  = 1,2
         pos_notes_frame         = 0,3
+        pos_buf_frame           = 0,2
+        
+        # Coordinate inside button frame
+        pos_peaks_config_frame  = 0,3
 
         '''
         Frame Definitions
         '''
         # Define parent directory frame at the top
         self.frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
-        # Add some spacing
-        self.frame_directory.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_directory.columnconfigure(0, weight=1)
-        #self.frame_directory.rowconfigure(0, weight=1)
-        # Ensure the frame expands across columns
-        self.frame_directory.grid(columnspan=2)
+        # Add padding
+        self.frame_directory.grid(pady=5)
         
         # Define config directory frame
-        self.frame_config = define_frame(self.window, pos_config_frame[0], pos_config_frame[1], NSEW)
-        # Add some spacing
-        self.frame_config.grid(padx=5, pady=5)
+        self.frame_config = define_frame(self.window, pos_config_frame[0], pos_config_frame[1], NW)
         # Ensure the box expands with the frame in the x axis
-        self.frame_config.rowconfigure(0, weight=1)
-        #self.frame_config.columnconfigure(1, weight=1)
-        # Have it cover 2 x-coordinates
-        self.frame_config.grid(rowspan=2)
+        self.frame_config.columnconfigure(1, weight=1)
         # Add a boundary
         self.frame_config.config(relief=SOLID, padding=5)
-    
 
-        # Define peaks configuration frame
-        self.frame_peaks_config = define_frame(self.window, pos_peaks_config_frame[0], 
-                                               pos_peaks_config_frame[1], NSEW)
-        # Add some spacing
-        self.frame_peaks_config.grid(padx=5, pady=5)
-        # Ensure the box expands with the frame in the x axis
-        self.frame_peaks_config.columnconfigure(0, weight=1)
-        
         # Define button configuration frame
         self.frame_buttons = define_frame(self.window, pos_button_frame[0], pos_button_frame[1], N)
-        # Add some spacing
-        self.frame_buttons.grid(padx=5, pady=5)
+        # Add additional padding
+        self.frame_buttons.config(padding=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_buttons.columnconfigure(0, weight=1)
+
+        # Note: Nested in button configuration frame
+        # Define peaks configuration frame
+        self.frame_peaks_config = define_frame(self.frame_buttons, pos_peaks_config_frame[0], 
+                                               pos_peaks_config_frame[1], NSEW)
+        # Ensure the box expands with the frame
+        self.frame_peaks_config.columnconfigure(0, weight=1)
+        self.frame_peaks_config.columnconfigure(1, weight=1)
+        # Add a boundary
+        self.frame_peaks_config.config(relief=SOLID, padding=5)
         
         # Define graph frame
         self.frame_graph = define_frame(self.window, pos_graph_frame[0], pos_graph_frame[1], NSEW)
-        # Add some spacing
-        self.frame_graph.grid(padx=5, pady=5)
-        # Ensure the box expands with the frame in the x axis
+        # Ensure the box expands with the frame
         self.frame_graph.columnconfigure(0, weight=1)
         self.frame_graph.rowconfigure(0, weight=1)
-        # Ensure the frame expands across rows
-        self.frame_directory.grid(rowspan=3)
+        # Add padding
+        self.frame_graph.grid(padx=10)
         
+        # Define lower buffer frame at bottom
+        frame_buf = define_frame(self.window, pos_buf_frame[0], pos_buf_frame[1], NSEW)
+        # Define height
+        frame_buf.config(height=50)
+        # Ensure the frame expands across all columns
+        frame_buf.grid(columnspan=3)
+
         # Define notes frame
-        self.frame_note = define_frame(self.window, pos_notes_frame[0], pos_notes_frame[1], NSEW)
-        # Add some spacing
-        self.frame_note.grid(padx=5, pady=5)
+        #self.frame_note = define_frame(self.window, pos_notes_frame[0], pos_notes_frame[1], NSEW)
         # Ensure the box expands with the frame in the x axis
-        self.frame_note.columnconfigure(0, weight=1)
-        self.frame_note.rowconfigure(0, weight=1)
-        self.frame_note.columnconfigure(1, weight=1)
-        self.frame_note.rowconfigure(1, weight=1)
+        #self.frame_note.columnconfigure(0, weight=1)
+        #self.frame_note.rowconfigure(0, weight=1)
+        #self.frame_note.columnconfigure(1, weight=1)
+        #self.frame_note.rowconfigure(1, weight=1)
         # Ensure the frame expands across columns
         #self.frame_directory.grid(columnspan=2)
 
@@ -525,39 +530,40 @@ class measure_session():
         pos_new_config_button               = 2,0
 
         pos_config_label                    = 0,0
-        pos_config_continous_label          = 0,1
-        pos_config_fstart_label             = 0,2
-        pos_config_fstop_label              = 0,3
-        pos_config_rbw_label                = 0,4
-        pos_config_vbw_label                = 0,5
-        pos_config_amp_label                = 0,6
-        pos_config_atten_label              = 0,7
-        pos_config_detector_label           = 0,8
-        pos_config_emifilter_label          = 0,9
-        pos_config_sweeppoints_label        = 0,10
-        pos_config_sweepcount_label         = 0,11
-        pos_config_tracemode_label          = 0,12
-        pos_config_unit_label               = 0,13
-        pos_config_offset_label             = 0,14
-        pos_config_step_label               = 0,15
-        pos_config_xscale_label             = 0,16
+        pos_config_para_label               = 1,1
+        pos_config_continous_label          = 0,2
+        pos_config_fstart_label             = 0,3
+        pos_config_fstop_label              = 0,4
+        pos_config_rbw_label                = 0,5
+        pos_config_vbw_label                = 0,6
+        pos_config_amp_label                = 0,7
+        pos_config_atten_label              = 0,8
+        pos_config_detector_label           = 0,9
+        pos_config_emifilter_label          = 0,10
+        pos_config_sweeppoints_label        = 0,11
+        pos_config_sweepcount_label         = 0,12
+        pos_config_tracemode_label          = 0,13
+        pos_config_unit_label               = 0,14
+        pos_config_offset_label             = 0,15
+        pos_config_step_label               = 0,16
+        pos_config_xscale_label             = 0,17
 
-        pos_config_continous_textbox        = 1,1
-        pos_config_fstart_textbox           = 1,2
-        pos_config_fstop_textbox            = 1,3
-        pos_config_rbw_textbox              = 1,4
-        pos_config_vbw_textbox              = 1,5
-        pos_config_amp_textbox              = 1,6
-        pos_config_atten_textbox            = 1,7
-        pos_config_detector_textbox         = 1,8
-        pos_config_emifilter_textbox        = 1,9
-        pos_config_sweeppoints_textbox      = 1,10
-        pos_config_sweepcount_textbox       = 1,11
-        pos_config_tracemode_textbox        = 1,12
-        pos_config_unit_textbox             = 1,13
-        pos_config_offset_textbox           = 1,14
-        pos_config_step_textbox             = 1,15
-        pos_config_xscale_textbox           = 1,16
+        pos_config_continous_textbox        = 1,2
+        pos_config_fstart_textbox           = 1,3
+        pos_config_fstop_textbox            = 1,4
+        pos_config_rbw_textbox              = 1,5
+        pos_config_vbw_textbox              = 1,6
+        pos_config_amp_textbox              = 1,7
+        pos_config_atten_textbox            = 1,8
+        pos_config_detector_textbox         = 1,9
+        pos_config_emifilter_textbox        = 1,10
+        pos_config_sweeppoints_textbox      = 1,11
+        pos_config_sweepcount_textbox       = 1,12
+        pos_config_tracemode_textbox        = 1,13
+        pos_config_unit_textbox             = 1,14
+        pos_config_offset_textbox           = 1,15
+        pos_config_step_textbox             = 1,16
+        pos_config_xscale_textbox           = 1,17
 
         # For buttons frame
         pos_new_measurement_button          = 0,0
@@ -565,12 +571,13 @@ class measure_session():
         pos_export_graph_button             = 0,2
 
         # For peaks configuration frame
-        pos_lags_label                        = 0,0
-        pos_threshold_label                   = 0,1
-        pos_influence_label                   = 0,2
-        pos_lags_entrybox                     = 1,0
-        pos_threshold_entrybox                = 1,1
-        pos_influence_entrybox                = 1,2
+        pos_peakframe_label                   = 1,0
+        pos_lags_label                        = 0,1
+        pos_threshold_label                   = 0,2
+        pos_influence_label                   = 0,3
+        pos_lags_entrybox                     = 1,1
+        pos_threshold_entrybox                = 1,2
+        pos_influence_entrybox                = 1,3
 
         # For notes frame
         pos_name_label                        = 0,0
@@ -600,6 +607,9 @@ class measure_session():
         
 
         config_label = define_label(self.frame_config, pos_config_label[0], pos_config_label[1], text="Configuration", sticky=NSEW)
+        config_para_label = define_label(self.frame_config, pos_config_para_label[0], pos_config_para_label[1], text="----- Parameters -----", sticky=EW)
+        config_para_label.config(anchor="center")
+
         config_continous_label = define_label(self.frame_config, pos_config_continous_label[0],
                                               pos_config_continous_label[1], text="continous", sticky=NSEW)
         config_fstart_label = define_label(self.frame_config, pos_config_fstart_label[0],
@@ -675,29 +685,35 @@ class measure_session():
                                             pos_export_graph_button[1], sticky=NSEW, text="Export Graph")
         
         '''Frame peak configuration'''
+        peakframe_label = define_label(self.frame_peaks_config, pos_peakframe_label[0], pos_peakframe_label[1], text="----- Peak Selection Config -----", 
+                                       sticky=EW)
+        peakframe_label.config(anchor="center")
+        peakframe_label.grid(columnspan=3)
         lags_label = define_label(self.frame_peaks_config, pos_lags_label[0], 
-                                           pos_lags_label[1], text="Lags", sticky=NSEW)
+                                           pos_lags_label[1], text="Lags",)
         threshold_label = define_label(self.frame_peaks_config, pos_threshold_label[0], 
-                                         pos_threshold_label[1], text="Threshold", sticky=NSEW)
+                                         pos_threshold_label[1], text="Threshold")
         influence_label = define_label(self.frame_peaks_config, pos_influence_label[0], 
-                                           pos_influence_label[1], text="influence", sticky=NSEW)
+                                           pos_influence_label[1], text="Influence")
         lags_textbox = define_entry_textbox(self.frame_peaks_config, pos_lags_entrybox[0], pos_lags_entrybox[1])
         threshold_textbox = define_entry_textbox(self.frame_peaks_config, pos_threshold_entrybox[0], 
-                                         pos_threshold_entrybox[1], sticky=NSEW)
+                                         pos_threshold_entrybox[1])
         influence_textbox = define_entry_textbox(self.frame_peaks_config, pos_influence_entrybox[0],
-                                         pos_influence_entrybox[1], sticky=NSEW)
+                                         pos_influence_entrybox[1])
         
         '''Frame Note'''
-        note_entrybox = define_entry_textbox(self.frame_note, pos_note_entrybox[0], pos_note_entrybox[1], sticky=NSEW)
-        name_entrybox = define_entry_textbox(self.frame_note, pos_name_entrybox[0], pos_name_entrybox[1], sticky=NSEW)
+        #note_entrybox = define_entry_textbox(self.frame_note, pos_note_entrybox[0], pos_note_entrybox[1], sticky=NSEW)
+        #name_entrybox = define_entry_textbox(self.frame_note, pos_name_entrybox[0], pos_name_entrybox[1], sticky=NSEW)
 
-        note_label = define_label(self.frame_note, pos_note_label[0], pos_note_label[1], sticky=NSEW, text="Note")
-        name_label = define_label(self.frame_note, pos_name_label[0], pos_name_label[1], sticky=NSEW, text="Measurement Name")
+        #note_label = define_label(self.frame_note, pos_note_label[0], pos_note_label[1], sticky=NSEW, text="Note")
+        #name_label = define_label(self.frame_note, pos_name_label[0], pos_name_label[1], sticky=NSEW, text="Measurement Name")
 
         '''Frame Graph'''
-        graph_plot, ax = define_plot(self.frame_graph, sticky=NSEW)
+        canvas, ax = define_plot(self.frame_graph, sticky=NSEW)
         # Temp plot for testing
         ax.plot([1, 2, 3, 4], [10, 20, 25, 30])
+        #toolbar = NavigationToolbar2Tk(canvas, self.frame_graph)
+        #toolbar.update()
 
     '''
     Function Description: Defines a new window called when the new session
@@ -1010,8 +1026,6 @@ class plot_session():
 
         # Define parent directory frame at the top
         self.frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
-        # Add some spacing
-        self.frame_directory.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_directory.columnconfigure(0, weight=1)
         self.frame_directory.rowconfigure(0, weight=1)
@@ -1020,8 +1034,6 @@ class plot_session():
 
         # Define metadata frame at the top
         self.frame_metadata = define_frame(self.window, pos_metadata_frame[0], pos_metadata_frame[1], NSEW)
-        # Add some spacing
-        self.frame_metadata.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x axis
         self.frame_metadata.columnconfigure(0, weight=1)
         self.frame_metadata.rowconfigure(0, weight=1)
@@ -1030,37 +1042,27 @@ class plot_session():
 
         # define Json file list on the left
         self.frame_json = define_frame(self.window, pos_json_frame[0], pos_json_frame[1], NSEW)
-        # Add some spacing
-        self.frame_json.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in x,y axis
         self.frame_json.columnconfigure(0, weight=1)
         self.frame_json.rowconfigure(1, weight=1)
         
         # define measurement in selected json file on the right of above
         self.frame_measurement = define_frame(self.window, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
-        # Add some spacing
-        self.frame_measurement.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in x,y axis
         self.frame_measurement.columnconfigure(0, weight=1)
         self.frame_measurement.rowconfigure(1, weight=1)
 
         # define buttons frame on right of above (Select, Clear, Plot)
         self.frame_buttons = define_frame(self.window, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
-        # Add some spacing
-        self.frame_buttons.grid(padx=5, pady=5)
 
         # define final selection frame on the right of above
         self.frame_selection = define_frame(self.window, pos_selection_frame[0], pos_selection_frame[1], NSEW)
-        # Add some spacing
-        self.frame_selection.grid(padx=5, pady=5)
         # Ensure the box expands with the frame in the x,y axis
         self.frame_selection.columnconfigure(0, weight=1)
         self.frame_selection.rowconfigure(1, weight=1)
 
         # Define lower buffer frame at bottom
         frame_buf = define_frame(self.window, pos_buf_frame[0], pos_buf_frame[1], S)
-        # Add some spacing
-        frame_buf.grid(padx=5, pady=5)
         # Ensure the frame expands across all columns
         frame_buf.grid(columnspan=4)
 
