@@ -139,6 +139,8 @@ class Session:
 Desc:   Class contains different configurations for reading data from device
 '''
 class Config:
+    # Class variable with the number of default configurations
+    CONFIGS_AVAIL = 7
 
     def __init__(self):
         pass

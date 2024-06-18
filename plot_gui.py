@@ -378,12 +378,16 @@ class measure_session():
         self.curr_directory = os.getcwd()   # Get current directory
 
         # Widgets
+        self.meas_configs = []  # List of all measurement configurations available
         self.config_dropdown = None
         self.filepath = None
                 
         # Parent window size
         sizex = 1600
         sizey = 900
+
+        # Load measurement configuration file
+        self.load_meas_configfile()
 
         '''
         Frame Definitions
@@ -415,7 +419,28 @@ class measure_session():
         # Create framework
         self.create_parent_frames()
 
+
+    ''' General Functions '''
+    '''
+    Function Description: Loads the configuration json file with
+    all configurations for measurements. If it does not exist,
+    creates it with default configurations
+    '''
+    def load_meas_configfile(self):
+        # Check if a config files exists and load
+
+        # Else create one with default configurations found in the emc.py file
+
+        #self.meas_configs = 
+        pass
+
+
+    ''' UI for Parent Window Generation Functions '''
     
+    '''
+    Function Description: Creates a frame to show the path of the current
+    session savefile
+    '''
     def create_frame_directory(self, position):
 
         # Define parent directory frame at the top
@@ -438,8 +463,13 @@ class measure_session():
         
         session_new_button = define_button(frame_directory, pos_new_session_button[0],
                                                 pos_new_session_button[1], text="New Session", sticky=NSEW, 
-                                                function_call=self.create_new_session)
+                                                function_call=self.cb_create_new_sessio)
 
+    '''
+    Function Description: Creates the configuration frame. Has a dropdown for
+    possible configurations, a button to add new and textboxes to display
+    current configuration
+    '''
     def create_frame_config(self, position):
 
         # Define config directory frame
@@ -496,7 +526,8 @@ class measure_session():
         self.config_dropdown = define_drop_down(frame_config, pos_config_dropdown[0], 
                                                 pos_config_dropdown[1], content_list=config_list, sticky=NW)
         config_new_button = define_button(frame_config, pos_new_config_button[0], 
-                                          pos_new_config_button[1], text="New Config", sticky=NW)
+                                          pos_new_config_button[1], text="New Config", sticky=NW,
+                                          function_call=self.cb_create_add_config_window)
 
         config_label = define_label(frame_config, pos_config_label[0], pos_config_label[1], text="Configuration", sticky=NSEW)
         config_para_label = define_label(frame_config, pos_config_para_label[0], pos_config_para_label[1], text="----- Parameters -----", sticky=EW)
@@ -568,6 +599,10 @@ class measure_session():
         config_xscale_textbox = define_entry_textbox(frame_config, pos_config_xscale_textbox[0],
                                                      pos_config_xscale_textbox[1], sticky=NSEW)
 
+    '''
+    Function Description: Creates the button frame. It has the save and new measurement
+    buttons along with a nested frame with settings to identify peaks
+    '''
     def create_frame_buttons(self, position):
 
         # Define button configuration frame
@@ -588,13 +623,17 @@ class measure_session():
                                                pos_new_measurement_button[1], sticky=NSEW, text="New Measurement")
         save_measurement_button = define_button(frame_buttons, pos_save_measurement_button[0],
                                                 pos_save_measurement_button[1], sticky=NSEW, text="Save Masurement", 
-                                                function_call=self.create_save_measurement_window)
+                                                function_call=self.cb_create_save_measurement_window)
         
         # define a nested frame for the peaks configurations
         self.create_frame_peaks_config(frame_buttons, pos_peaks_config_frame)
         
-
-    # Note frame exists inside button frame
+    '''
+    Function Description: Creates a frame with textboxes for settings used to
+    identfy peaks in the graph
+    
+    Note: frame exists inside button frame
+    '''
     def create_frame_peaks_config(self, container, position):
 
         # Note: Nested in button configuration frame
@@ -632,9 +671,11 @@ class measure_session():
         threshold_textbox = define_entry_textbox(frame_peaks_config, pos_threshold_entrybox[0], 
                                          pos_threshold_entrybox[1])
         influence_textbox = define_entry_textbox(frame_peaks_config, pos_influence_entrybox[0],
-                                         pos_influence_entrybox[1])
-        
+                                         pos_influence_entrybox[1])    
     
+    '''
+    Function Description: Creates a frame to host the matplotlib interactive graph
+    '''
     def create_frame_graph(self, position):
 
         # Define graph frame
@@ -649,7 +690,10 @@ class measure_session():
         # Temp plot for testing
         ax.plot([1, 2, 3, 4], [10, 20, 25, 30])
         
-
+    '''
+    Function Description: Creates a frame to act as a buffer for padding against the bottom of
+    the window
+    '''
     def create_frame_buf(self, position):
 
         # Define lower buffer frame at bottom
@@ -658,7 +702,6 @@ class measure_session():
         frame_buf.config(height=50)
         # Ensure the frame expands across all columns
         frame_buf.grid(columnspan=3)
-
 
     '''
     Function Description: Generate required frames for GUI
@@ -685,32 +728,43 @@ class measure_session():
 
 
 
-    '''
-    Function Description: Defines a new window called when the new session
-    button is clicked. Allows user to save a new session file and add
-    a description of the new session being started
-    '''        
-    def create_new_session(self):
-        # update new savefile path with a savefile prompt
-        self.filepath = filedialog.asksaveasfilename(defaultextension=".json")
-
-        # load current filepath in textbox
-        self.session_entry_box.delete(0, END)
-        self.session_entry_box.insert(END, self.filepath)
-
+    ''' Callback Functions '''
 
     '''
     Function Description: Defines a new window called when the new configuration button
     is pressed. Allows user to fill a new configuration which is saved.
     '''
-    def create_add_config_window(self):
-        pass
+    def cb_create_add_config_window(self):
+        # Create new window over the main window
+        window = Toplevel()
+        window.geometry("400x200+300+400")
+        window.resizable(width=False, height=False)
+        window.title("Add new Configuration")
+        # Ensure frame can expand to window borders
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
+
+        # Disabled access to main terminal window
+        window.grab_set()
+        window.focus()
+        # Install window close routine
+        window.protocol("WM_DELETE_WINDOW",window.destroy)
     
+
+    def cb_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
+
+        # Save the new measurements name and description as required
+
+        # Destroy the save window
+        window.destroy()
+
+        pass
+
     '''
     Function Description: Defines a new window called when the save measurement button is
     pressed. Allows user to fill a measurement name and notes
     '''
-    def create_save_measurement_window(self):
+    def cb_create_save_measurement_window(self):
         # Create new window over the main window
         window = Toplevel()
         window.geometry("400x200+300+400")
@@ -744,10 +798,27 @@ class measure_session():
         # Create a nested frame for save and cancel buttons
         nested_frame = define_frame(frame, 1, 2, frame_sticky=SE)
         
-        save_button = define_button(nested_frame, 0, 0, " Save ")
-        cancel_button = define_button(nested_frame, 1, 0, "Cancel")
+        # Saves the name and description given by the user
+        save_button = define_button(nested_frame, 0, 0, " Save ", function_call= lambda: self.cb_meas_save_button_pressed(window, meas_name=new_meas_entrybox.get(), 
+                                                                                                                          meas_desc=description_scrollbox.get('1.0', END)))
+        cancel_button = define_button(nested_frame, 1, 0, "Cancel", function_call=window.destroy)
 
-    
+
+    '''
+    Function Description: Defines a new window called when the new session
+    button is clicked. Allows user to save a new session file and add
+    a description of the new session being started
+    '''        
+    def cb_create_new_sessio(self):
+        # update new savefile path with a savefile prompt
+        self.filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[('JSON File', '.json')])
+
+        # load current filepath in textbox
+        self.session_entry_box.delete(0, END)
+        self.session_entry_box.insert(END, self.filepath)
+
+
+
         
 # Generates a session plot window
 class plot_session():
