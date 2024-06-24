@@ -23,6 +23,7 @@ DEFAULT_PADDING             = 5
 '''Global Variables'''
 settings_dir_path = ".settings"   # Saves the folder and file to store settings in
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
+configs_file_path = settings_dir_path + "/configs.json"   # Measurement configurations
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
 theme = {                
@@ -68,7 +69,7 @@ Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/combobox
 
 Return: drop down object
 '''
-def define_drop_down(container, position_y = 0, position_x = 0, content_list = None, default_state = 'normal', 
+def define_drop_down(container, position_y = 0, position_x = 0, content_list = None, default_state = 'readonly', 
                      theme = 'default', sticky=None, width = 30):
 
     menu = ttk_b.Combobox(container, value=content_list, state=default_state, bootstyle = theme, width=width)
@@ -187,7 +188,7 @@ Note: Refer to https://ttkbootstrap.readthedocs.io/en/latest/styleguide/entry/
 
 Return: entrybox object
 '''
-def define_entry_textbox(container, position_y = 0, position_x = 0, width = 10, state = 'normal', theme = 'default', sticky = None):
+def define_entry_textbox(container, position_y = 0, position_x = 0, width = 10, state = 'readonly', theme = 'default', sticky = None):
     entrybox = ttk_b.Entry(container, width=width, state=state, bootstyle=theme)
     entrybox.grid(column=position_y, row=position_x, padx=DEFAULT_PADDING, pady=DEFAULT_PADDING)
     entrybox.configure(font=("Times New Roman", 10))
@@ -421,19 +422,6 @@ class measure_session():
 
 
     ''' General Functions '''
-    '''
-    Function Description: Loads the configuration json file with
-    all configurations for measurements. If it does not exist,
-    creates it with default configurations
-    '''
-    def load_meas_configfile(self):
-        # Check if a config files exists and load
-
-        # Else create one with default configurations found in the emc.py file
-
-        #self.meas_configs = 
-        pass
-
 
     ''' UI for Parent Window Generation Functions '''
     
@@ -463,31 +451,19 @@ class measure_session():
         
         session_new_button = define_button(frame_directory, pos_new_session_button[0],
                                                 pos_new_session_button[1], text="New Session", sticky=NSEW, 
-                                                function_call=self.cb_create_new_sessio)
+                                                function_call=self.cb_create_new_session)
+
 
     '''
-    Function Description: Creates the configuration frame. Has a dropdown for
-    possible configurations, a button to add new and textboxes to display
-    current configuration
+    Function Description: Creates all the widgets associated with
+    configuration parameters
     '''
-    def create_frame_config(self, position):
-
-        # Define config directory frame
-        frame_config = define_frame(self.window, position[0], position[1], NW)
-        # Ensure the box expands with the frame in the x axis
-        frame_config.columnconfigure(1, weight=1)
-        # Add a boundary
-        frame_config.config(relief=SOLID, padding=5)
-
-        '''
-        Widget Positions (y,x coordinate in main window)
-        '''
-        pos_config_dropdown                 = 1,0
-        pos_new_config_button               = 2,0
-
+    def create_config_para_widgets(self, frame_config, state = 'disabled'):
+        
         pos_config_label                    = 0,0
         pos_config_para_label               = 1,1
-        pos_config_continous_label          = 0,2
+
+        pos_config_continuous_label          = 0,2
         pos_config_fstart_label             = 0,3
         pos_config_fstop_label              = 0,4
         pos_config_rbw_label                = 0,5
@@ -504,7 +480,7 @@ class measure_session():
         pos_config_step_label               = 0,16
         pos_config_xscale_label             = 0,17
 
-        pos_config_continous_textbox        = 1,2
+        pos_config_continuous_textbox        = 1,2
         pos_config_fstart_textbox           = 1,3
         pos_config_fstop_textbox            = 1,4
         pos_config_rbw_textbox              = 1,5
@@ -521,20 +497,12 @@ class measure_session():
         pos_config_step_textbox             = 1,16
         pos_config_xscale_textbox           = 1,17
 
-        # Need to get the list of configurations here somehow
-        config_list = ""
-        self.config_dropdown = define_drop_down(frame_config, pos_config_dropdown[0], 
-                                                pos_config_dropdown[1], content_list=config_list, sticky=NW)
-        config_new_button = define_button(frame_config, pos_new_config_button[0], 
-                                          pos_new_config_button[1], text="New Config", sticky=NW,
-                                          function_call=self.cb_create_add_config_window)
-
-        config_label = define_label(frame_config, pos_config_label[0], pos_config_label[1], text="Configuration", sticky=NSEW)
+        config_label = define_label(frame_config, pos_config_label[0], pos_config_label[1], text="Configuration Name", sticky=NSEW)
         config_para_label = define_label(frame_config, pos_config_para_label[0], pos_config_para_label[1], text="----- Parameters -----", sticky=EW)
         config_para_label.config(anchor="center")
 
-        config_continous_label = define_label(frame_config, pos_config_continous_label[0],
-                                              pos_config_continous_label[1], text="continous", sticky=NSEW)
+        config_continuous_label = define_label(frame_config, pos_config_continuous_label[0],
+                                              pos_config_continuous_label[1], text="continuous", sticky=NSEW)
         config_fstart_label = define_label(frame_config, pos_config_fstart_label[0],
                                                 pos_config_fstart_label[1], text="fstart", sticky=NSEW)
         config_fstop_label = define_label(frame_config, pos_config_fstop_label[0], 
@@ -566,8 +534,8 @@ class measure_session():
         config_xscale_label = define_label(frame_config, pos_config_xscale_label[0], 
                                            pos_config_xscale_label[1], text="xscale", sticky=NSEW)
         
-        config_continous_textbox = define_entry_textbox(frame_config, pos_config_continous_textbox[0],
-                                                        pos_config_continous_textbox[1], sticky=NSEW)
+        config_continuous_textbox = define_entry_textbox(frame_config, pos_config_continuous_textbox[0],
+                                                        pos_config_continuous_textbox[1], sticky=NSEW)
         config_fstart_textbox = define_entry_textbox(frame_config, pos_config_fstart_textbox[0],
                                                      pos_config_fstart_textbox[1], sticky=NSEW)
         config_fstop_textbox = define_entry_textbox(frame_config, pos_config_fstop_textbox[0],
@@ -598,6 +566,150 @@ class measure_session():
                                                    pos_config_step_textbox[1], sticky=NSEW)
         config_xscale_textbox = define_entry_textbox(frame_config, pos_config_xscale_textbox[0],
                                                      pos_config_xscale_textbox[1], sticky=NSEW)
+
+
+        # Add to dictionary and return
+        config_dict = {}
+        config_dict['continuous'] = config_continuous_textbox
+        config_dict["fstart"] = config_fstart_textbox
+        config_dict["fstop"] = config_fstop_textbox
+        config_dict["rbw"] = config_rbw_textbox
+        config_dict["vbw"] = config_vbw_textbox
+        config_dict["amp"] = config_amp_textbox
+        config_dict["atten"] = config_atten_textbox
+        config_dict["detector"] = config_detector_textbox
+        config_dict["emifilter"] = config_emifilter_textbox
+        config_dict["sweeppoints"] = config_sweeppoints_textbox
+        config_dict["sweepcount"] = config_sweepcount_textbox
+        config_dict["tracemode"] = config_tracemode_textbox
+        config_dict["unit"] = config_unit_textbox
+        config_dict["offset"] = config_offset_textbox
+        config_dict["step"] = config_step_textbox
+        config_dict["xscale"] = config_xscale_textbox
+
+        # Set state to active if required
+        if state == 'normal':
+            for i in config_dict:
+                config_dict[i].config(state = 'normal')
+
+        return config_dict
+
+    '''Function Description: Loads the configuration json file with
+    all configurations for measurements. If it does not exist,
+    creates it with default configurations
+    '''
+    def load_meas_configfile(self):
+        
+        self.meas_configs = []
+        
+        # Check if the configs json file exists
+        if os.path.isfile(configs_file_path):
+            # If yes, open and read it
+            with open(configs_file_path, 'r') as f:
+                self.meas_configs = json.load(f)
+        
+        else:
+            # If not, load default names
+            for i in range(emc.Config.CONFIGS_AVAIL):
+                self.meas_configs.append(emc.Config.get_config(i))
+        
+    def save_configs(self):
+        
+        # Save new added config to config file
+        # Write to file
+        with open(configs_file_path, 'w') as json_file:
+            for i in self.meas_configs:
+                json.dump(i, json_file, indent=4)
+
+
+    def get_available_config_names(self):
+        
+        meas_config_names = []
+
+        self.load_meas_configfile()
+        for i in self.meas_configs:
+            meas_config_names.append(i['Name'])
+
+        return meas_config_names
+
+
+    def update_para_widgets(self, widgets, state = 'readonly'):
+        curr_config = None
+        # Find confguration parameters of currently
+        # selected config
+        config_name = self.config_dropdown.get()
+        for i in self.meas_configs:
+            if (config_name == i["Name"]):
+                curr_config = i
+                break
+
+        # enable edits to textboxes
+        for i in widgets:
+            widgets[i].config(state='normal')
+            # Clear each entrybox
+            widgets[i].delete('0',END)
+
+        # insert new data 
+        widgets['continuous'].insert(END, curr_config['continuous'])
+        widgets["fstart"].insert(END, curr_config['fstart'])
+        widgets["fstop"].insert(END, curr_config['fstop'])
+        widgets["rbw"].insert(END, curr_config['rbw'])
+        widgets["vbw"].insert(END, curr_config['vbw'])
+        widgets["amp"].insert(END, curr_config['amp'])
+        widgets["atten"].insert(END, curr_config['amp'])
+        widgets["detector"].insert(END, curr_config['detector'])
+        widgets["emifilter"].insert(END, curr_config['emifilter'])
+        widgets["sweeppoints"].insert(END, curr_config['sweeppoints'])
+        widgets["sweepcount"].insert(END, curr_config['sweepcount'])
+        widgets["tracemode"].insert(END, curr_config['tracemode'])
+        widgets["unit"].insert(END, curr_config['unit'])
+        widgets["offset"].insert(END, curr_config['offset'])
+        #widgets["step"].insert(END, curr_config['step'])
+        widgets["xscale"].insert(END, curr_config['xscale'])
+
+        if state == 'readonly':
+            # disable edits to textboxes
+            for i in widgets:
+                widgets[i].config(state='readonly')
+
+    '''
+    Function Description: Creates the configuration frame. Has a dropdown for
+    possible configurations, a button to add new and textboxes to display
+    current configuration
+    '''
+    def create_frame_config(self, position):
+
+        # Define config directory frame
+        frame_config = define_frame(self.window, position[0], position[1], NW)
+        # Ensure the box expands with the frame in the x axis
+        frame_config.columnconfigure(1, weight=1)
+        # Add a boundary
+        frame_config.config(relief=SOLID, padding=5)
+
+        '''
+        Widget Positions (y,x coordinate in main window)
+        '''
+        pos_config_dropdown                 = 1,0
+        pos_new_config_button               = 2,0
+
+        # Get available config names to populate drop down
+        config_list = self.get_available_config_names()
+
+        self.config_dropdown = define_drop_down(frame_config, pos_config_dropdown[0], 
+                                                pos_config_dropdown[1], content_list=config_list, sticky=NW)
+        # Set the first configuration as the default on startup
+        self.config_dropdown.set(config_list[0])
+        # Create widgets
+        config_para_widgets = self.create_config_para_widgets(frame_config)
+        # Bind a functio to update parameter textboxes when user makes a selection
+        self.config_dropdown.bind("<<ComboboxSelected>>", lambda event: self.update_para_widgets(widgets=config_para_widgets))
+
+        config_new_button = define_button(frame_config, pos_new_config_button[0], 
+                                          pos_new_config_button[1], text="New Config", sticky=NW,
+                                          function_call=self.cb_create_add_config_window)
+        
+        self.update_para_widgets(config_para_widgets)
+        
 
     '''
     Function Description: Creates the button frame. It has the save and new measurement
@@ -737,19 +849,73 @@ class measure_session():
     def cb_create_add_config_window(self):
         # Create new window over the main window
         window = Toplevel()
-        window.geometry("400x200+300+400")
+        window.geometry("260x750+400+100")
         window.resizable(width=False, height=False)
-        window.title("Add new Configuration")
-        # Ensure frame can expand to window borders
-        window.columnconfigure(0, weight=1)
-        window.rowconfigure(0, weight=1)
+        window.title("New Configuration")
 
         # Disabled access to main terminal window
         window.grab_set()
         window.focus()
         # Install window close routine
         window.protocol("WM_DELETE_WINDOW",window.destroy)
-    
+
+        # Create a frame 
+        frame_config = define_frame(window, 0, 0, NW)
+
+        # Define entry box not defined in function to create parameter widgets
+        config_name_entry = define_entry_textbox(frame_config, 1, 0, sticky=NSEW)
+        config_name_entry.config(state='normal')
+
+        # Define config widgets
+        widgets = self.create_config_para_widgets(frame_config, state = 'normal')
+        self.update_para_widgets(widgets, state = 'normal')
+
+        # Create a frame for save and cancel buttons
+        save_frame = define_frame(window, 0, 1, frame_sticky=SE)
+        
+        # Append config name entrybox to widgets list
+        widgets['Name'] = config_name_entry
+        # Saves the name and description given by the user
+        save_button = define_button(save_frame, 0, 0, " Save ", function_call= lambda: self.cb_config_save_button_pressed(window, widgets))
+        # Kill the save window
+        cancel_button = define_button(save_frame, 1, 0, "Cancel", function_call=window.destroy)
+
+
+    def cb_config_save_button_pressed(self, window, widgets):
+        
+        new_config = {}
+        new_config['Name'] = widgets['Name'].get()
+        new_config['continuous'] = widgets['continuous'].get()
+        new_config['fstart'] = widgets['fstart'].get()
+        new_config['fstop'] = widgets['fstop'].get()
+        new_config['rbw'] = widgets['rbw'].get()
+        new_config['vbw'] = widgets['vbw'].get()
+        new_config['amp'] = widgets['amp'].get()
+        new_config['atten'] = widgets['atten'].get()
+        new_config['detector'] = widgets['detector'].get()
+        new_config['emifilter'] = widgets['emifilter'].get()
+        new_config['sweeppoints'] = widgets['sweeppoints'].get()
+        new_config['sweepcount'] = widgets['sweepcount'].get()
+        new_config['tracemode'] = widgets['tracemode'].get()
+        new_config['unit'] = widgets['sweeppoints'].get()
+        new_config['offset'] = widgets['sweepcount'].get()
+        new_config['xscale'] = widgets['tracemode'].get()
+
+        # Append new config to list
+        self.meas_configs.append(new_config)
+
+        # Save to config json file
+        self.save_configs()
+
+        # Update the drop down box
+        # Get available config names to populate drop down
+        config_list = self.get_available_config_names()
+        self.config_dropdown['values'] = config_list
+
+        # Terminate the window
+        window.destroy()
+
+        return
 
     def cb_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
 
@@ -793,6 +959,7 @@ class measure_session():
         description_lable = define_label(frame, 0, 1, "Notes")
 
         new_meas_entrybox = define_entry_textbox(frame, 1, 0, sticky=EW)
+        new_meas_entrybox.config(state='normal')
         description_scrollbox = define_scroll_textbox(frame, 1, 1, 40, 5, sticky=NSEW)
 
         # Create a nested frame for save and cancel buttons
@@ -801,6 +968,7 @@ class measure_session():
         # Saves the name and description given by the user
         save_button = define_button(nested_frame, 0, 0, " Save ", function_call= lambda: self.cb_meas_save_button_pressed(window, meas_name=new_meas_entrybox.get(), 
                                                                                                                           meas_desc=description_scrollbox.get('1.0', END)))
+        # Kill the save window
         cancel_button = define_button(nested_frame, 1, 0, "Cancel", function_call=window.destroy)
 
 
@@ -809,7 +977,7 @@ class measure_session():
     button is clicked. Allows user to save a new session file and add
     a description of the new session being started
     '''        
-    def cb_create_new_sessio(self):
+    def cb_create_new_session(self):
         # update new savefile path with a savefile prompt
         self.filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[('JSON File', '.json')])
 
@@ -818,8 +986,6 @@ class measure_session():
         self.session_entry_box.insert(END, self.filepath)
 
 
-
-        
 # Generates a session plot window
 class plot_session():
 

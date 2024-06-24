@@ -149,16 +149,16 @@ class Config:
     # return correct configuration based on number provided
     def get_config(cls, opt: int):
         # Dictionary associating options provided with configuration methods
-        configs = {1: Config.cfg_default,
-                2: Config.cfg_condqp,
-                3: Config.cfg_cond1,
-                4: Config.cfg_cond2,
-                5: Config.cfg_rad1,
-                6: Config.cfg_radcoarse,
-                7: Config.cfg_mt100}
+        configs = {0: Config.cfg_default,
+                1: Config.cfg_condqp,
+                2: Config.cfg_cond1,
+                3: Config.cfg_cond2,
+                4: Config.cfg_rad1,
+                5: Config.cfg_radcoarse,
+                6: Config.cfg_mt100}
         
         # Use default config if an invalid option was provided
-        if opt <= 0 or opt > len(configs):
+        if opt < 0 or opt >= len(configs):
             print("Invalid Option: Default config applied")
             opt = 1
 
@@ -171,15 +171,15 @@ class Config:
 
     @classmethod
     def cfg_default(cls):
-        return {'continuous':0, 'fstart':30000000, 
+        return {'Name': 'cfg_default', 'continuous':0, 'fstart':30000000, 
                 'fstop':1000000000, 'rbw':120000, 'vbw':1000000, 
-                'amp':1, 'atten':0, 'detector':'POSitive', 
+                'amp':1, 'atten':0, 'detector':'POSitive', 'xscale':'LIN',
                 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 
-                'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0, 'step':None}
+                'tracemode':'MAXHold', 'unit':'dBuV', 'offset':0}
 
     @classmethod
     def cfg_condqp(cls):   # conducted emf by cable - quasi filter
-        return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 
+        return {'Name': 'cfg_condqp', 'continuous':0, 'xscale':'LIN', 'fstart':150000, 
                 'fstop':30000000, 'sweeptime': 15, 'rbw':9000, 'vbw':9000, 
                 'amp':0, 'atten':0, 'detector':'QPEak', 'emifilter':1, 
                 'sweeppoints':601, 'sweepcount':1, 'tracemode':'MAXHold', 
@@ -187,7 +187,7 @@ class Config:
 
     @classmethod
     def cfg_cond2(cls):    # generic conducted emf
-        return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 
+        return {'Name': 'cfg_cond2', 'continuous':0, 'xscale':'LIN', 'fstart':150000, 
                 'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 
                 'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 
                 'emifilter':1, 'sweeppoints':601, 'sweepcount':1, 
@@ -195,7 +195,7 @@ class Config:
         
     @classmethod
     def cfg_cond1(cls):    # generic conducted emf
-        return {'continuous':0, 'xscale':'LIN', 'fstart':150000, 
+        return {'Name': 'cfg_cond1', 'continuous':0, 'xscale':'LIN', 'fstart':150000, 
                 'sweeptime': 0.2, 'fstop':30000000, 'rbw':9000, 
                 'vbw':9000, 'amp':0, 'atten':0, 'detector':'POSitive', 
                 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 
@@ -203,7 +203,7 @@ class Config:
 
     @classmethod
     def cfg_rad1(cls):     # radiation emmission
-        return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 
+        return {'Name': 'cfg_rad1', 'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 
                 'fstop':1000000000, 'sweeptime': 0.2, 'rbw':120000, 'vbw':120000, 
                 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 
                 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 
@@ -211,7 +211,7 @@ class Config:
 
     @classmethod
     def cfg_radcoarse(cls):    # radiation emmission Less resolution
-        return {'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 
+        return {'Name': 'cfg_radcoarse', 'continuous':0, 'xscale':'LIN', 'offset': 0, 'fstart':30000000, 
                 'fstop':1000000000, 'sweeptime': 0.2, 'rbw':1000000, 'vbw':1000000, 
                 'amp':1, 'atten':0, 'detector':'POSitive', 'emifilter':1, 
                 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 
@@ -219,7 +219,7 @@ class Config:
 
     @classmethod
     def cfg_mt100(cls):        # Specifc to measurement transformer
-        return {'continuous':0, 'xscale':'LIN', 'offset': 0, 
+        return {'Name': 'cfg_mt100', 'continuous':0, 'xscale':'LIN', 'offset': 0, 
                 'fstart':150000, 'fstop':100000000, 'sweeptime': 0.2, 
                 'rbw':9000, 'vbw':9000, 'amp':1, 'atten':0, 'detector':'POSitive', 
                 'emifilter':1, 'sweeppoints':601, 'sweepcount':20, 'tracemode':'MAXHold', 
