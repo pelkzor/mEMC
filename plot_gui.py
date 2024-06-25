@@ -617,9 +617,11 @@ class measure_session():
         
         # Save new added config to config file
         # Write to file
+        data = []
+        for i in self.meas_configs:
+            data.append(i)
         with open(configs_file_path, 'w') as json_file:
-            for i in self.meas_configs:
-                json.dump(i, json_file, indent=4)
+            json.dump(data, json_file, indent=4)
 
 
     def get_available_config_names(self):
@@ -850,7 +852,7 @@ class measure_session():
         # Create new window over the main window
         window = Toplevel()
         window.geometry("260x750+400+100")
-        window.resizable(width=False, height=False)
+        #window.resizable(width=False, height=False)
         window.title("New Configuration")
 
         # Disabled access to main terminal window
@@ -883,8 +885,9 @@ class measure_session():
 
     def cb_config_save_button_pressed(self, window, widgets):
         
+        # Get user input in each textbox and place in a dictionary
         new_config = {}
-        new_config['Name'] = widgets['Name'].get()
+        new_config['Name'] = widgets['Name'].get()      # Get data from Config Name widget
         new_config['continuous'] = widgets['continuous'].get()
         new_config['fstart'] = widgets['fstart'].get()
         new_config['fstop'] = widgets['fstop'].get()
@@ -901,13 +904,16 @@ class measure_session():
         new_config['offset'] = widgets['sweepcount'].get()
         new_config['xscale'] = widgets['tracemode'].get()
 
+        # Perform input validation
+        # Return
+
         # Append new config to list
         self.meas_configs.append(new_config)
 
         # Save to config json file
         self.save_configs()
 
-        # Update the drop down box
+        # Update the drop down box in the main windows config frame
         # Get available config names to populate drop down
         config_list = self.get_available_config_names()
         self.config_dropdown['values'] = config_list
@@ -934,7 +940,7 @@ class measure_session():
         # Create new window over the main window
         window = Toplevel()
         window.geometry("400x200+300+400")
-        window.resizable(width=False, height=False)
+        #window.resizable(width=False, height=False)
         window.title("Save Measurement")
         # Ensure frame can expand to window borders
         window.columnconfigure(0, weight=1)
