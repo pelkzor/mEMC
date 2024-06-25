@@ -63,14 +63,14 @@ class Session:
         self.parent_dict["Description"] = self.session_desc
 
         # Start collecting data
-        measure_count = 0
-        while(1):
-            self.measure(measure_count)
-            # Increment measurement counter
-            measure_count += 1
+        #measure_count = 0
+        #while(1):
+        #    self.measure(measure_count)
+        #    # Increment measurement counter
+        #    measure_count += 1
 
     # Iterate 1 measurement
-    def measure(self,count):
+    def measure(self, meas_name = '', note = '', count=0):
         curr_time = datetime.now()
         logtime = curr_time.strftime("%H%M%S")
         # Initalise dictionary for current measurement 
@@ -79,14 +79,13 @@ class Session:
         measure_dict["Configuration"] = self.meas.cfg
 
         # request notes and save
-        note = input("Write Note Now: ")
+        #note = input("Write Note Now: ")
         measure_dict["Note"] = note
 
         # Clear buffers
         data = []      
         datax = []
         
-
         # Read data
         data, datax = self.meas.measure()
         # Apply corrections
@@ -106,27 +105,30 @@ class Session:
         measure_dict["Frequency"] = datax
 
         # Append to Parent dictionary
-        self.parent_dict["measure" + str(count)] = measure_dict
+        if meas_name == '':
+            self.parent_dict["measure" + str(count)] = measure_dict
+        else:
+            self.parent_dict["measure" + str(count) + '_' + meas_name] = measure_dict
 
         # Save current parent dictionary to file
-        self.savedata(f'{self.savefilename}') 
+        #self.savedata(f'{self.savefilename}') 
 
         # Generate plot
-        plot(data, datax, note, f'{self.savefilename}_measure_{count}')
+        #plot(data, datax, note, f'{self.savefilename}_measure_{count}')
 
         # Modify Configuration
-        print("Modify Config:")
-        print("0. No change")
-        print("1. Default\n2. Condqp - Conducted emf w/ quasi filter")
-        print("3. Cond1 - Conducted emf (Generic)")
-        print("4. Cond2 - Conducted emf (Generic)")
-        print("5. Rad1 - Radiation emmission")
-        print("6. Radcoarse - Radition Emmission (Coarse)")
-        print("7. Mt100 - Measurement transformer specific")
-        config_opt = int(input())
+        #print("Modify Config:")
+        #print("0. No change")
+        #print("1. Default\n2. Condqp - Conducted emf w/ quasi filter")
+        #print("3. Cond1 - Conducted emf (Generic)")
+        #print("4. Cond2 - Conducted emf (Generic)")
+        #print("5. Rad1 - Radiation emmission")
+        #print("6. Radcoarse - Radition Emmission (Coarse)")
+        #print("7. Mt100 - Measurement transformer specific")
+        #config_opt = int(input())
         # only call config change methods if default option is not selected
-        if(config_opt > 0):
-            self.meas.update_config(config_opt)
+        #if(config_opt > 0):
+        #    self.meas.update_config(config_opt)
 
     # save dictionary to file
     def savedata(self, file):
@@ -455,9 +457,9 @@ def list_json_files(directory = ''):
 
 
 # API's
-def meas_instr():
-    dev = DSA832()      # Create device object
-    Session(dev, input("Savefile Name: "), input("Test Description:")).begin()
+#def meas_instr():
+    #dev = DSA832()      # Create device object
+    #Session(dev, input("Savefile Name: "), input("Test Description:")).begin()
 
 #def meas_plot():
 #    files = list_json_files()

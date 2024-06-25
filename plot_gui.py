@@ -25,6 +25,8 @@ settings_dir_path = ".settings"   # Saves the folder and file to store settings 
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
 configs_file_path = settings_dir_path + "/configs.json"   # Measurement configurations
 
+#dev = emc.DSA832()      # Create a device object representing the device used to get readings
+
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
 theme = {                
         "default"   : "superhero",
@@ -377,6 +379,8 @@ class measure_session():
         # Init class variables
         self.window = window
         self.curr_directory = os.getcwd()   # Get current directory
+        self.meas_count = 0         # Tracks how many measurements have been taken in a session
+        self.session_obj = None     # Each sessions object
 
         # Widgets
         self.meas_configs = []  # List of all measurement configurations available
@@ -463,7 +467,7 @@ class measure_session():
         pos_config_label                    = 0,0
         pos_config_para_label               = 1,1
 
-        pos_config_continuous_label          = 0,2
+        pos_config_continuous_label         = 0,2
         pos_config_fstart_label             = 0,3
         pos_config_fstop_label              = 0,4
         pos_config_rbw_label                = 0,5
@@ -734,10 +738,10 @@ class measure_session():
         pos_peaks_config_frame              = 0,2
 
         new_measurement_button = define_button(frame_buttons, pos_new_measurement_button[0],
-                                               pos_new_measurement_button[1], sticky=NSEW, text="New Measurement")
+                                               pos_new_measurement_button[1], sticky=NSEW, text="New Measurement",
+                                               function_call=self.cb_create_new_measurement_window)
         save_measurement_button = define_button(frame_buttons, pos_save_measurement_button[0],
-                                                pos_save_measurement_button[1], sticky=NSEW, text="Save Masurement", 
-                                                function_call=self.cb_create_save_measurement_window)
+                                                pos_save_measurement_button[1], sticky=NSEW, text="Save Masurement")
         
         # define a nested frame for the peaks configurations
         self.create_frame_peaks_config(frame_buttons, pos_peaks_config_frame)
@@ -781,11 +785,25 @@ class measure_session():
                                          pos_threshold_label[1], text="Threshold", sticky=W)
         influence_label = define_label(frame_peaks_config, pos_influence_label[0], 
                                            pos_influence_label[1], text="Influence", sticky=W)
-        lags_textbox = define_entry_textbox(frame_peaks_config, pos_lags_entrybox[0], pos_lags_entrybox[1])
+        
+        # Create stringvar variables to track when an update to the entry box is made
+        lags_var = StringVar()
+        threshold_var = StringVar()
+        influence_var = StringVar()
+        # Set up a trace on the StringVar to call on_entry_change whenever it changes
+        lags_var.trace_add("write", None)   # PLACE PLOTTING FUNCTIONHERE
+        threshold_var.trace_add("write", None)   # PLACE PLOTTING FUNCTIONHERE
+        influence_var.trace_add("write", None)   # PLACE PLOTTING FUNCTIONHERE
+        # Create entry boxes
+        lags_textbox = define_entry_textbox(frame_peaks_config, pos_lags_entrybox[0], 
+                                            pos_lags_entrybox[1], state='normal')
+        lags_textbox.config(textvariable=lags_var)
         threshold_textbox = define_entry_textbox(frame_peaks_config, pos_threshold_entrybox[0], 
-                                         pos_threshold_entrybox[1])
+                                         pos_threshold_entrybox[1], state='normal')
+        threshold_textbox.config(textvariable=threshold_var)
         influence_textbox = define_entry_textbox(frame_peaks_config, pos_influence_entrybox[0],
-                                         pos_influence_entrybox[1])    
+                                         pos_influence_entrybox[1], state='normal') 
+        influence_textbox.config(textvariable=influence_var)   
     
     '''
     Function Description: Creates a frame to host the matplotlib interactive graph
@@ -923,20 +941,23 @@ class measure_session():
 
         return
 
-    def cb_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
 
+    def cb_new_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
+
+        # Get measurement
         # Save the new measurements name and description as required
-
+        self.session_obj.measure(meas_name=meas_name, note=meas_desc, 
+                                 count=self.meas_count)
+        
         # Destroy the save window
         window.destroy()
 
-        pass
 
     '''
     Function Description: Defines a new window called when the save measurement button is
     pressed. Allows user to fill a measurement name and notes
     '''
-    def cb_create_save_measurement_window(self):
+    def cb_create_new_measurement_window(self):
         # Create new window over the main window
         window = Toplevel()
         window.geometry("400x200+300+400")
@@ -972,8 +993,11 @@ class measure_session():
         nested_frame = define_frame(frame, 1, 2, frame_sticky=SE)
         
         # Saves the name and description given by the user
-        save_button = define_button(nested_frame, 0, 0, " Save ", function_call= lambda: self.cb_meas_save_button_pressed(window, meas_name=new_meas_entrybox.get(), 
-                                                                                                                          meas_desc=description_scrollbox.get('1.0', END)))
+        save_button = define_button(nested_frame, 
+                                    0, 0, " Save ", 
+                                    function_call= lambda: self.cb_new_meas_save_button_pressed(window, 
+                                                                meas_name=new_meas_entrybox.get(), 
+                                                                meas_desc=description_scrollbox.get('1.0', END)))
         # Kill the save window
         cancel_button = define_button(nested_frame, 1, 0, "Cancel", function_call=window.destroy)
 
@@ -984,13 +1008,27 @@ class measure_session():
     a description of the new session being started
     '''        
     def cb_create_new_session(self):
+        
+        # Destroy previous session object
+        if self.session_obj != None:
+            self.session_obj.destroy()
+
         # update new savefile path with a savefile prompt
         self.filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[('JSON File', '.json')])
+
+        # Get filename
+        file_name = os.path.basename(self.filepath)
+
+        # Enable other widgets
 
         # load current filepath in textbox
         self.session_entry_box.delete(0, END)
         self.session_entry_box.insert(END, self.filepath)
 
+        # Create sessions object
+        # /todo add ability to give description
+        self.session_obj = emc.Session(dev, file_name, "")
+        self.session_obj.begin()
 
 # Generates a session plot window
 class plot_session():
