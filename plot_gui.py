@@ -9,6 +9,7 @@ from tkinter import ttk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+import matplotlib.pyplot as plt
 '''
 Add name of measurement. "name" field to be added.display in measure list box
 '''
@@ -24,8 +25,8 @@ settings_dir_path = ".settings"   # Saves the folder and file to store settings 
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
 configs_file_path = settings_dir_path + "/configs.json"   # Measurement configurations
 
-dev = None
-#dev = emc.DSA832()      # Create a device object representing the device used to get readings
+#dev = None
+dev = emc.DSA832()      # Create a device object representing the device used to get readings
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
 theme = {                
@@ -271,25 +272,24 @@ def create_menubar(window):
 
     return menu_bar
 
-
-def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", ylabel = "y-axis", title = "Plot", toolbar = False):
+'''return tuple of (canvas, figure, subplot)'''
+def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", 
+                ylabel = "y-axis", title = "Plot", toolbar = False):
     # Create a Matplotlib figure and plot
-    fig = Figure()
-    ax = fig.add_subplot(111, facecolor=(0.0,0.5,1.0,0.1))
+    fig, ax = plt.subplots(1,1)
+    ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    fig.tight_layout()
 
     # Create a canvas and add the figure to it
     canvas = FigureCanvasTkAgg(fig, master=container)
-    canvas.draw()
     canvas.get_tk_widget().grid(row=position_x, column=position_y, sticky=sticky)
     if toolbar == True:
         toolbar = NavigationToolbar2Tk(canvas, container, pack_toolbar=False)
         toolbar.update()
         toolbar.grid(row=position_x+1, column=position_y, sticky=sticky)
-    return canvas, ax
+    return (canvas, ax)
 
 '''
 Function Description: Alterate between modes (Plot vs Measurement)
@@ -389,7 +389,9 @@ class measure_session():
         self.filepath = None
         self.new_measurement_button = None  # New measurement button
         self.save_measurement_button = None    # Save measurement button
-                
+        self.ax = None          # Handles plot
+        self.canvas = None      # Handles canvas where plot is placed
+
         # Parent window size
         sizex = 1600
         sizey = 900
@@ -459,147 +461,6 @@ class measure_session():
         session_new_button = define_button(frame_directory, pos_new_session_button[0],
                                                 pos_new_session_button[1], text="New Session", sticky=NSEW, 
                                                 function_call=self.cb_create_new_session)
-
-
-    '''
-    Function Description: Creates all the widgets associated with
-    configuration parameters
-    '''
-    def create_config_para_widgets(self, frame_config, state = 'disabled'):
-        
-        pos_config_label                    = 0,0
-        pos_config_para_label               = 1,1
-
-        pos_config_continuous_label         = 0,2
-        pos_config_fstart_label             = 0,3
-        pos_config_fstop_label              = 0,4
-        pos_config_rbw_label                = 0,5
-        pos_config_vbw_label                = 0,6
-        pos_config_amp_label                = 0,7
-        pos_config_atten_label              = 0,8
-        pos_config_detector_label           = 0,9
-        pos_config_emifilter_label          = 0,10
-        pos_config_sweeppoints_label        = 0,11
-        pos_config_sweepcount_label         = 0,12
-        pos_config_tracemode_label          = 0,13
-        pos_config_unit_label               = 0,14
-        pos_config_offset_label             = 0,15
-        pos_config_step_label               = 0,16
-        pos_config_xscale_label             = 0,17
-
-        pos_config_continuous_textbox        = 1,2
-        pos_config_fstart_textbox           = 1,3
-        pos_config_fstop_textbox            = 1,4
-        pos_config_rbw_textbox              = 1,5
-        pos_config_vbw_textbox              = 1,6
-        pos_config_amp_textbox              = 1,7
-        pos_config_atten_textbox            = 1,8
-        pos_config_detector_textbox         = 1,9
-        pos_config_emifilter_textbox        = 1,10
-        pos_config_sweeppoints_textbox      = 1,11
-        pos_config_sweepcount_textbox       = 1,12
-        pos_config_tracemode_textbox        = 1,13
-        pos_config_unit_textbox             = 1,14
-        pos_config_offset_textbox           = 1,15
-        pos_config_step_textbox             = 1,16
-        pos_config_xscale_textbox           = 1,17
-
-        config_label = define_label(frame_config, pos_config_label[0], pos_config_label[1], text="Configuration Name", sticky=NSEW)
-        config_para_label = define_label(frame_config, pos_config_para_label[0], pos_config_para_label[1], text="----- Parameters -----", sticky=EW)
-        config_para_label.config(anchor="center")
-
-        config_continuous_label = define_label(frame_config, pos_config_continuous_label[0],
-                                              pos_config_continuous_label[1], text="continuous", sticky=NSEW)
-        config_fstart_label = define_label(frame_config, pos_config_fstart_label[0],
-                                                pos_config_fstart_label[1], text="fstart", sticky=NSEW)
-        config_fstop_label = define_label(frame_config, pos_config_fstop_label[0], 
-                                              pos_config_fstop_label[1], text="fstop", sticky=NSEW)
-        config_rbw_label = define_label(frame_config, pos_config_rbw_label[0], 
-                                        pos_config_rbw_label[1], text="rbw", sticky=NSEW)
-        config_vbw_label = define_label(frame_config, pos_config_vbw_label[0], 
-                                        pos_config_vbw_label[1], text="vbw", sticky=NSEW)
-        config_amp_label = define_label(frame_config, pos_config_amp_label[0],
-                                        pos_config_amp_label[1], text="amp", sticky=NSEW)
-        config_atten_label = define_label(frame_config, pos_config_atten_label[0],
-                                          pos_config_atten_label[1], text="atten", sticky=NSEW)
-        config_detector_label = define_label(frame_config, pos_config_detector_label[0], 
-                                             pos_config_detector_label[1], text='detector', sticky=NSEW)
-        config_emifilter_label = define_label(frame_config, pos_config_emifilter_label[0], 
-                                              pos_config_emifilter_label[1], text='emifilter', sticky=NSEW)
-        config_sweeppoints_label = define_label(frame_config, pos_config_sweeppoints_label[0],
-                                                pos_config_sweeppoints_label[1], text="sweep points", sticky=NSEW)
-        config_sweepcount_label = define_label(frame_config, pos_config_sweepcount_label[0],
-                                               pos_config_sweepcount_label[1], text="sweepcount", sticky=NSEW) 
-        config_tracemode_label = define_label(frame_config, pos_config_tracemode_label[0],
-                                              pos_config_tracemode_label[1], text="tracemode", sticky=NSEW)
-        config_unit_label = define_label(frame_config, pos_config_unit_label[0], 
-                                         pos_config_unit_label[1], text="unit", sticky=NSEW)
-        config_offset_label = define_label(frame_config, pos_config_offset_label[0], 
-                                           pos_config_offset_label[1], text="offset", sticky=NSEW)
-        config_step_label = define_label(frame_config, pos_config_step_label[0], 
-                                         pos_config_step_label[1], text="step", sticky=NSEW)
-        config_xscale_label = define_label(frame_config, pos_config_xscale_label[0], 
-                                           pos_config_xscale_label[1], text="xscale", sticky=NSEW)
-        
-        config_continuous_textbox = define_entry_textbox(frame_config, pos_config_continuous_textbox[0],
-                                                        pos_config_continuous_textbox[1], sticky=NSEW)
-        config_fstart_textbox = define_entry_textbox(frame_config, pos_config_fstart_textbox[0],
-                                                     pos_config_fstart_textbox[1], sticky=NSEW)
-        config_fstop_textbox = define_entry_textbox(frame_config, pos_config_fstop_textbox[0],
-                                                    pos_config_fstop_textbox[1], sticky=NSEW)
-        config_rbw_textbox = define_entry_textbox(frame_config, pos_config_rbw_textbox[0],
-                                                  pos_config_rbw_textbox[1], sticky=NSEW)
-        config_vbw_textbox = define_entry_textbox(frame_config, pos_config_vbw_textbox[0],
-                                                  pos_config_vbw_textbox[1], sticky=NSEW)
-        config_amp_textbox = define_entry_textbox(frame_config, pos_config_amp_textbox[0],
-                                                  pos_config_amp_textbox[1], sticky=NSEW)
-        config_atten_textbox = define_entry_textbox(frame_config, pos_config_atten_textbox[0],
-                                                    pos_config_atten_textbox[1], sticky=NSEW)
-        config_detector_textbox = define_entry_textbox(frame_config, pos_config_detector_textbox[0],
-                                                       pos_config_detector_textbox[1], sticky=NSEW)
-        config_emifilter_textbox = define_entry_textbox(frame_config, pos_config_emifilter_textbox[0],
-                                                        pos_config_emifilter_textbox[1], sticky=NSEW)
-        config_sweeppoints_textbox = define_entry_textbox(frame_config, pos_config_sweeppoints_textbox[0],
-                                                          pos_config_sweeppoints_textbox[1], sticky=NSEW)
-        config_sweepcount_textbox = define_entry_textbox(frame_config, pos_config_sweepcount_textbox[0],
-                                                         pos_config_sweepcount_textbox[1], sticky=NSEW)
-        config_tracemode_textbox = define_entry_textbox(frame_config, pos_config_tracemode_textbox[0],
-                                                        pos_config_tracemode_textbox[1], sticky=NSEW)
-        config_unit_textbox = define_entry_textbox(frame_config, pos_config_unit_textbox[0],
-                                                   pos_config_unit_textbox[1], sticky=NSEW)
-        config_offset_textbox = define_entry_textbox(frame_config, pos_config_offset_textbox[0],
-                                                     pos_config_offset_textbox[1], sticky=NSEW)
-        config_step_textbox = define_entry_textbox(frame_config, pos_config_step_textbox[0],
-                                                   pos_config_step_textbox[1], sticky=NSEW)
-        config_xscale_textbox = define_entry_textbox(frame_config, pos_config_xscale_textbox[0],
-                                                     pos_config_xscale_textbox[1], sticky=NSEW)
-
-
-        # Add to dictionary and return
-        config_dict = {}
-        config_dict['continuous'] = config_continuous_textbox
-        config_dict["fstart"] = config_fstart_textbox
-        config_dict["fstop"] = config_fstop_textbox
-        config_dict["rbw"] = config_rbw_textbox
-        config_dict["vbw"] = config_vbw_textbox
-        config_dict["amp"] = config_amp_textbox
-        config_dict["atten"] = config_atten_textbox
-        config_dict["detector"] = config_detector_textbox
-        config_dict["emifilter"] = config_emifilter_textbox
-        config_dict["sweeppoints"] = config_sweeppoints_textbox
-        config_dict["sweepcount"] = config_sweepcount_textbox
-        config_dict["tracemode"] = config_tracemode_textbox
-        config_dict["unit"] = config_unit_textbox
-        config_dict["offset"] = config_offset_textbox
-        config_dict["step"] = config_step_textbox
-        config_dict["xscale"] = config_xscale_textbox
-
-        # Set state to active if required
-        if state == 'normal':
-            for i in config_dict:
-                config_dict[i].config(state = 'normal')
-
-        return config_dict
 
     
     '''
@@ -745,9 +606,9 @@ class measure_session():
         # Add padding
         frame_graph.grid(padx=10)
 
-        canvas, ax = define_plot(frame_graph, sticky=NSEW, toolbar=True)
-        # Temp plot for testing
-        ax.plot([1, 2, 3, 4], [10, 20, 25, 30])
+
+        self.canvas, self.ax = define_plot(frame_graph, sticky=NSEW, toolbar=True)
+
         
     '''
     Function Description: Creates a frame to act as a buffer for padding against the bottom of
@@ -786,6 +647,147 @@ class measure_session():
         self.create_frame_buf(pos_buf_frame)
 
     '''Configurations Functions'''
+
+    '''
+    Function Description: Creates all the widgets associated with
+    configuration parameters
+    '''
+    def create_config_para_widgets(self, frame_config, state = 'disabled'):
+        
+        pos_config_label                    = 0,0
+        pos_config_para_label               = 1,1
+
+        pos_config_continuous_label         = 0,2
+        pos_config_fstart_label             = 0,3
+        pos_config_fstop_label              = 0,4
+        pos_config_rbw_label                = 0,5
+        pos_config_vbw_label                = 0,6
+        pos_config_amp_label                = 0,7
+        pos_config_atten_label              = 0,8
+        pos_config_detector_label           = 0,9
+        pos_config_emifilter_label          = 0,10
+        pos_config_sweeppoints_label        = 0,11
+        pos_config_sweepcount_label         = 0,12
+        pos_config_tracemode_label          = 0,13
+        pos_config_unit_label               = 0,14
+        pos_config_offset_label             = 0,15
+        pos_config_step_label               = 0,16
+        pos_config_xscale_label             = 0,17
+
+        pos_config_continuous_textbox        = 1,2
+        pos_config_fstart_textbox           = 1,3
+        pos_config_fstop_textbox            = 1,4
+        pos_config_rbw_textbox              = 1,5
+        pos_config_vbw_textbox              = 1,6
+        pos_config_amp_textbox              = 1,7
+        pos_config_atten_textbox            = 1,8
+        pos_config_detector_textbox         = 1,9
+        pos_config_emifilter_textbox        = 1,10
+        pos_config_sweeppoints_textbox      = 1,11
+        pos_config_sweepcount_textbox       = 1,12
+        pos_config_tracemode_textbox        = 1,13
+        pos_config_unit_textbox             = 1,14
+        pos_config_offset_textbox           = 1,15
+        pos_config_step_textbox             = 1,16
+        pos_config_xscale_textbox           = 1,17
+
+        config_label = define_label(frame_config, pos_config_label[0], pos_config_label[1], text="Configuration Name", sticky=NSEW)
+        config_para_label = define_label(frame_config, pos_config_para_label[0], pos_config_para_label[1], text="----- Parameters -----", sticky=EW)
+        config_para_label.config(anchor="center")
+
+        config_continuous_label = define_label(frame_config, pos_config_continuous_label[0],
+                                              pos_config_continuous_label[1], text="continuous", sticky=NSEW)
+        config_fstart_label = define_label(frame_config, pos_config_fstart_label[0],
+                                                pos_config_fstart_label[1], text="fstart", sticky=NSEW)
+        config_fstop_label = define_label(frame_config, pos_config_fstop_label[0], 
+                                              pos_config_fstop_label[1], text="fstop", sticky=NSEW)
+        config_rbw_label = define_label(frame_config, pos_config_rbw_label[0], 
+                                        pos_config_rbw_label[1], text="rbw", sticky=NSEW)
+        config_vbw_label = define_label(frame_config, pos_config_vbw_label[0], 
+                                        pos_config_vbw_label[1], text="vbw", sticky=NSEW)
+        config_amp_label = define_label(frame_config, pos_config_amp_label[0],
+                                        pos_config_amp_label[1], text="amp", sticky=NSEW)
+        config_atten_label = define_label(frame_config, pos_config_atten_label[0],
+                                          pos_config_atten_label[1], text="atten", sticky=NSEW)
+        config_detector_label = define_label(frame_config, pos_config_detector_label[0], 
+                                             pos_config_detector_label[1], text='detector', sticky=NSEW)
+        config_emifilter_label = define_label(frame_config, pos_config_emifilter_label[0], 
+                                              pos_config_emifilter_label[1], text='emifilter', sticky=NSEW)
+        config_sweeppoints_label = define_label(frame_config, pos_config_sweeppoints_label[0],
+                                                pos_config_sweeppoints_label[1], text="sweep points", sticky=NSEW)
+        config_sweepcount_label = define_label(frame_config, pos_config_sweepcount_label[0],
+                                               pos_config_sweepcount_label[1], text="sweepcount", sticky=NSEW) 
+        config_tracemode_label = define_label(frame_config, pos_config_tracemode_label[0],
+                                              pos_config_tracemode_label[1], text="tracemode", sticky=NSEW)
+        config_unit_label = define_label(frame_config, pos_config_unit_label[0], 
+                                         pos_config_unit_label[1], text="unit", sticky=NSEW)
+        config_offset_label = define_label(frame_config, pos_config_offset_label[0], 
+                                           pos_config_offset_label[1], text="offset", sticky=NSEW)
+        config_step_label = define_label(frame_config, pos_config_step_label[0], 
+                                         pos_config_step_label[1], text="step", sticky=NSEW)
+        config_xscale_label = define_label(frame_config, pos_config_xscale_label[0], 
+                                           pos_config_xscale_label[1], text="xscale", sticky=NSEW)
+        
+        config_continuous_textbox = define_entry_textbox(frame_config, pos_config_continuous_textbox[0],
+                                                        pos_config_continuous_textbox[1], sticky=NSEW)
+        config_fstart_textbox = define_entry_textbox(frame_config, pos_config_fstart_textbox[0],
+                                                     pos_config_fstart_textbox[1], sticky=NSEW)
+        config_fstop_textbox = define_entry_textbox(frame_config, pos_config_fstop_textbox[0],
+                                                    pos_config_fstop_textbox[1], sticky=NSEW)
+        config_rbw_textbox = define_entry_textbox(frame_config, pos_config_rbw_textbox[0],
+                                                  pos_config_rbw_textbox[1], sticky=NSEW)
+        config_vbw_textbox = define_entry_textbox(frame_config, pos_config_vbw_textbox[0],
+                                                  pos_config_vbw_textbox[1], sticky=NSEW)
+        config_amp_textbox = define_entry_textbox(frame_config, pos_config_amp_textbox[0],
+                                                  pos_config_amp_textbox[1], sticky=NSEW)
+        config_atten_textbox = define_entry_textbox(frame_config, pos_config_atten_textbox[0],
+                                                    pos_config_atten_textbox[1], sticky=NSEW)
+        config_detector_textbox = define_entry_textbox(frame_config, pos_config_detector_textbox[0],
+                                                       pos_config_detector_textbox[1], sticky=NSEW)
+        config_emifilter_textbox = define_entry_textbox(frame_config, pos_config_emifilter_textbox[0],
+                                                        pos_config_emifilter_textbox[1], sticky=NSEW)
+        config_sweeppoints_textbox = define_entry_textbox(frame_config, pos_config_sweeppoints_textbox[0],
+                                                          pos_config_sweeppoints_textbox[1], sticky=NSEW)
+        config_sweepcount_textbox = define_entry_textbox(frame_config, pos_config_sweepcount_textbox[0],
+                                                         pos_config_sweepcount_textbox[1], sticky=NSEW)
+        config_tracemode_textbox = define_entry_textbox(frame_config, pos_config_tracemode_textbox[0],
+                                                        pos_config_tracemode_textbox[1], sticky=NSEW)
+        config_unit_textbox = define_entry_textbox(frame_config, pos_config_unit_textbox[0],
+                                                   pos_config_unit_textbox[1], sticky=NSEW)
+        config_offset_textbox = define_entry_textbox(frame_config, pos_config_offset_textbox[0],
+                                                     pos_config_offset_textbox[1], sticky=NSEW)
+        config_step_textbox = define_entry_textbox(frame_config, pos_config_step_textbox[0],
+                                                   pos_config_step_textbox[1], sticky=NSEW)
+        config_xscale_textbox = define_entry_textbox(frame_config, pos_config_xscale_textbox[0],
+                                                     pos_config_xscale_textbox[1], sticky=NSEW)
+
+
+        # Add to dictionary and return
+        config_dict = {}
+        config_dict['continuous'] = config_continuous_textbox
+        config_dict["fstart"] = config_fstart_textbox
+        config_dict["fstop"] = config_fstop_textbox
+        config_dict["rbw"] = config_rbw_textbox
+        config_dict["vbw"] = config_vbw_textbox
+        config_dict["amp"] = config_amp_textbox
+        config_dict["atten"] = config_atten_textbox
+        config_dict["detector"] = config_detector_textbox
+        config_dict["emifilter"] = config_emifilter_textbox
+        config_dict["sweeppoints"] = config_sweeppoints_textbox
+        config_dict["sweepcount"] = config_sweepcount_textbox
+        config_dict["tracemode"] = config_tracemode_textbox
+        config_dict["unit"] = config_unit_textbox
+        config_dict["offset"] = config_offset_textbox
+        config_dict["step"] = config_step_textbox
+        config_dict["xscale"] = config_xscale_textbox
+
+        # Set state to active if required
+        if state == 'normal':
+            for i in config_dict:
+                config_dict[i].config(state = 'normal')
+
+        return config_dict
+
 
     '''Function Description: Loads the configuration json file with
     all configurations for measurements. If it does not exist,
@@ -1088,8 +1090,6 @@ class measure_session():
         if self.session_description == '':
             return 
 
-        # Enable other widgets
-
         # load current filepath in textbox
         self.session_entry_box.config(state='normal')
         self.session_entry_box.delete(0, END)
@@ -1108,7 +1108,10 @@ class measure_session():
     def cb_new_measure(self):
 
         # Get a new meausurement
-        self.session_obj.measure()
+        meas = self.session_obj.measure()
+
+        # Plot new data
+        emc.plotSingleCanvas(meas, canvas=self.canvas, axis=self.ax)
 
     def cb_new_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
 
@@ -1382,7 +1385,7 @@ class plot_session():
     '''
     def pltb_pressed(self):
         # plot plotting dictionary
-        emc.plot(self.to_plot)
+        emc.plotall(self.to_plot)
 
     '''
     Function Description: Called when clear button is pressed. Clears list of items from selection tree and 

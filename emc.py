@@ -72,33 +72,33 @@ class Session:
         # Clear buffers
         data = []      
         datax = []
-        
+        '''
         # Read data
         data, datax = self.meas.measure()
         # Apply corrections
-        data, datax = applycorrection(data, datax, self.fclist)
-        
+        data = applycorrection(data, datax, self.fclist)
+        '''
     
-        '''# TESTING. Loads data from a previous json recording. Simulating reading
+        # TESTING. Loads data from a previous json recording. Simulating reading
         # Data from actual instrument as above
         diction = load_sessiondata("session_test.json")["measure0"]
         data = diction["Sig_Level"]
         datax = diction['Frequency']
-        data, datax = applycorrection(data, datax, self.fclist)
-        '''
-
+        data = applycorrection(data, datax, self.fclist)
+        
         # Save data to dictionary
         measure_dict["Sig_Level"] = data
         measure_dict["Frequency"] = datax
 
         # Generate plot
         #plot(measure_dict)
+        return measure_dict
 
 
     # save dictionary to file
     def savemeasure(self, meas_dict, meas_name = '', note = ''):
 
-        meas_dict['Name'] = meas_name
+        meas_dict["Name"] = meas_name
         meas_dict["Note"] = note
         
         # Assign new measurement to parent dictionary
@@ -375,34 +375,62 @@ def getpeaks(lag, threshold, influence, data, datax):
     pv = [data[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
     return pf,pv
 
-# Plot waveform
-def plot(measurements, ref=None, peaklist = None): 
+def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Frequency", 
+            ylabel = "dBuV", label = None, title = None): 
         
     fclist = loadcorrection('tbaf1m.csv')
-    plt.figure()
+    datax = meas["Frequency"]
+    data = applycorrection(meas["Sig_Level"], datax, fclist)
+
+    # Clear the canvas before drawing the plot
+    axis.clear()
+    axis.plot(datax, data, linewidth = 0.5, label = label)
+
+    if ref:
+        axis.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
+        
+    if peaklist:            
+        axis.scatter(peaklist[0] , peaklist[1])
+
+    axis.set_title(title)
+    axis.set_xlabel(xlabel)
+    axis.set_ylabel(ylabel)
+    axis.grid(True)
+
+    canvas.draw()
+
+    return axis
+
+
+# Plot waveform
+def plotall(measurements, fig = plt, ref=None, peaklist = None, xlabel = "frequency", 
+            ylabel = "dBuV", title = "Measurement Plot", label = ""): 
+        
+    fclist = loadcorrection('tbaf1m.csv')
+    #plt.figure()
     for meas in measurements:
         datax = meas["Frequency"]
         data = applycorrection(meas["Sig_Level"], datax, fclist)
-        note = meas["Note"]
+
         #limit = [ 50 if x < 230000000 else 58 for x in datax]
         #plt.plot(datax, data, datax, limit, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
-        plt.plot(datax, data, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
+        fig.plot(datax, data, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
         if ref:
-            plt.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
+            fig.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
             
         if peaklist:            
-            plt.scatter(peaklist[0] , peaklist[1])
+            fig.scatter(peaklist[0] , peaklist[1])
 
     #plt.gcf().text(0.01,0.95, "Notes: " + note)
-    plt.title("Measurement Plot")
-    plt.xlabel("frequency")
-    plt.ylabel("dBuV")
-    #plt.ylim((0,60))
-    plt.tight_layout()
-    plt.grid()
-    plt.legend()
-    plt.show()
-    return plt
+    fig.title(title)
+    fig.xlabel(xlabel)
+    fig.ylabel(ylabel)
+    #fig.ylim((0,60))
+    fig.tight_layout()
+    fig.grid()
+    fig.legend()
+    fig.show()
+    return fig
 
 def list_json_files(directory = ''):
 
@@ -446,7 +474,7 @@ def list_json_files(directory = ''):
 #def meas_plot():
 #    files = list_json_files()
 #    selection = int(input("Select file to plot: "))
-#    plot_measured(meas[selection])
+#    plotall_measured(meas[selection])
 
 #meas_plot()
 #meas_instr()
