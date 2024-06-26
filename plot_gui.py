@@ -25,8 +25,8 @@ settings_dir_path = ".settings"   # Saves the folder and file to store settings 
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
 configs_file_path = settings_dir_path + "/configs.json"   # Measurement configurations
 
-#dev = None
-dev = emc.DSA832()      # Create a device object representing the device used to get readings
+# Create a device object representing the spectrum analyser used to get readings
+dev = emc.DSA832()      
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
 theme = {                
@@ -34,6 +34,9 @@ theme = {
         "dark"      : "darkly",
         "light"     : "journal"
         }
+
+
+'''----TTKBOOTSTRAP WIDGET DEFINITION HELPER FUNCTIONS START----'''
 
 '''
 Function Description: Define a frame for the UI objects
@@ -245,7 +248,7 @@ def define_treeview(container, position_y = 0, position_x = 0, selectmode = 'bro
 '''
 Function Description: Create a custom menu bar with options
 
-Parameters: None
+Parameters: window - tkinter container
 
 Return: Instance of menubar
 
@@ -272,7 +275,21 @@ def create_menubar(window):
 
     return menu_bar
 
-'''return tuple of (canvas, figure, subplot)'''
+'''
+Function Description: Builds a canvas and figure to plot graphs on canvas
+
+Parameters: container - window object
+position_y - y column position
+position_x - x column position
+sticky - frame side to attach to
+xlabel - default xlabel for plot
+ylabel - default ylabel for plot
+title - default title for plot
+toolbar - place a matplotlib toolbar with the graph or not
+
+Return: canvas - canvas widget
+ax - subplot object
+'''
 def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", 
                 ylabel = "y-axis", title = "Plot", toolbar = False):
     # Create a Matplotlib figure and plot
@@ -291,19 +308,10 @@ def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel
         toolbar.grid(row=position_x+1, column=position_y, sticky=sticky)
     return (canvas, ax)
 
-'''
-Function Description: Alterate between modes (Plot vs Measurement)
-'''
-def switch_mode_plot(window):
-    plot_session(window)
+'''----TTKBOOTSTRAP WIDGET DEFINITION HELPER FUNCTIONS END----'''
 
-def switch_mode_measure(window):
-    measure_session(window)
 
-'''
-Theme Functions
-'''
-
+'''----THEME FUNCTIONS START----'''
 '''
 Function Description: Saves current theme to json file
 
@@ -373,22 +381,36 @@ def load_theme():
 
     return saved_theme
 
+'''----THEME FUNCTIONS END----'''
 
+'''----GENERAL FUNCTION START----'''
+'''
+Function Description: Alternate between modes (Plot vs Measurement)
+'''
+def switch_mode_plot(window):
+    plot_session(window)
+
+def switch_mode_measure(window):
+    measure_session(window)
+
+'''----GENERAL FUNCTION END----'''
+
+'''----CLASS DEFINITIONS START----'''
 class measure_session():
     def __init__(self, window):
         # Init class variables
         self.window = window
         self.curr_directory = os.getcwd()   # Get current directory
-        self.meas_count = 0         # Tracks how many measurements have been taken in a session
-        self.session_obj = None     # Each sessions object
-        self.session_description = ''   # Current sessions description given by user
+        self.meas_count = 0                 # Tracks how many measurements have been taken in a session
+        self.session_obj = None             # Each sessions object
+        self.session_description = ''       # Current sessions description given by user
 
         # Widgets
-        self.meas_configs = []  # List of all measurement configurations available
-        self.config_dropdown = None
-        self.filepath = None
-        self.new_measurement_button = None  # New measurement button
-        self.save_measurement_button = None    # Save measurement button
+        self.meas_configs = []              # List of all measurement configurations available
+        self.config_dropdown = None         # Configuration selection drop down
+        self.filepath = None                # Savefile Path
+        self.new_measurement_button = None      # New measurement button
+        self.save_measurement_button = None     # Save measurement button
         self.ax = None          # Handles plot
         self.canvas = None      # Handles canvas where plot is placed
 
@@ -430,10 +452,7 @@ class measure_session():
         self.create_parent_frames()
 
 
-    ''' Frame Definition Functions '''
-
-    ''' UI for Parent Window Generation Functions '''
-    
+    ''' Parent Window Generation Functions '''
     '''
     Function Description: Creates a frame to show the path of the current
     session savefile
@@ -534,6 +553,7 @@ class measure_session():
         # define a nested frame for the peaks configurations
         self.create_frame_peaks_config(frame_buttons, pos_peaks_config_frame)
         
+
     '''
     Function Description: Creates a frame with textboxes for settings used to
     identfy peaks in the graph
@@ -593,6 +613,7 @@ class measure_session():
                                          pos_influence_entrybox[1], state='normal') 
         influence_textbox.config(textvariable=influence_var)   
     
+
     '''
     Function Description: Creates a frame to host the matplotlib interactive graph
     '''
@@ -606,7 +627,7 @@ class measure_session():
         # Add padding
         frame_graph.grid(padx=10)
 
-
+        # Define canvas
         self.canvas, self.ax = define_plot(frame_graph, sticky=NSEW, toolbar=True)
 
         
@@ -622,6 +643,7 @@ class measure_session():
         frame_buf.config(height=50)
         # Ensure the frame expands across all columns
         frame_buf.grid(columnspan=3)
+
 
     '''
     Function Description: Generate required frames for GUI
@@ -646,8 +668,8 @@ class measure_session():
         self.create_frame_graph(pos_graph_frame)
         self.create_frame_buf(pos_buf_frame)
 
-    '''Configurations Functions'''
 
+    '''Configurations Functions'''
     '''
     Function Description: Creates all the widgets associated with
     configuration parameters
@@ -789,7 +811,8 @@ class measure_session():
         return config_dict
 
 
-    '''Function Description: Loads the configuration json file with
+    '''
+    Function Description: Loads the configuration json file with
     all configurations for measurements. If it does not exist,
     creates it with default configurations
     '''
@@ -808,6 +831,10 @@ class measure_session():
             for i in range(emc.Config.CONFIGS_AVAIL):
                 self.meas_configs.append(emc.Config.get_config(i))
         
+    '''
+    Function Description: Saves all configurations 
+    to config json file
+    '''
     def save_configs(self):
         
         # Save new added config to config file
@@ -819,17 +846,33 @@ class measure_session():
             json.dump(data, json_file, indent=4)
 
 
+    '''
+    Function Description: Return all configuration
+    names from the configuration json file
+    '''
     def get_available_config_names(self):
         
+        # Store all configuration names
         meas_config_names = []
 
+        # Load configuration file
         self.load_meas_configfile()
+        # Return names from loaded configurations
         for i in self.meas_configs:
             meas_config_names.append(i['Name'])
 
         return meas_config_names
 
 
+    '''
+    Function Description: Used to update the configuration
+    widgets of the configuration parameters used in both
+    the config add window and config frame of the main window
+
+    Parameters: widgets - Dictionary of config parameters widgets
+    readonly - After writing to textboxes, determines if the widgets should be
+                left in readonly mode or normal mode
+    '''
     def update_para_widgets(self, widgets, readonly = TRUE):
         curr_config = None
         # Find confguration parameters of currently
@@ -872,7 +915,7 @@ class measure_session():
 
     ''' Callback Functions '''
 
-    '''----CONFIG WINDOW CALLBACKS START ----'''
+    '''----CONFIG WINDOW CALLBACKS START----'''
     '''
     Function Description: Defines a new window called when the new configuration button
     is pressed. Allows user to fill a new configuration which is saved.
@@ -1097,8 +1140,7 @@ class measure_session():
         self.session_entry_box.config(state='readonly')
 
         # Create sessions object
-        # /todo add ability to give description
-        self.session_obj = emc.Session(dev, self.filepath, "")
+        self.session_obj = emc.Session(dev, self.filepath, self.session_description)
 
         # Enable new measurement button
         self.new_measurement_button.config(state='normal')
@@ -1117,7 +1159,7 @@ class measure_session():
 
         # Get measurement
         # Save the new measurements name and description as required
-        self.session_obj.savemeasure(self.filepath, meas_name=meas_name, note=meas_desc)
+        self.session_obj.savemeasure(meas_name=meas_name, note=meas_desc)
         
         # Destroy the save window
         window.destroy()
@@ -1178,7 +1220,6 @@ class plot_session():
         for l in list:
             l.grid_forget()
             l.destroy()
-
 
         # Ensure display frame expands with window as required
         self.window.columnconfigure(0, weight=1)
@@ -1525,6 +1566,7 @@ class plot_session():
         # Call when the user selects measurements in the selection tree
         self.tree_selection.bind('<<TreeviewSelect>>', self.selection_selected)
 
+'''----CLASS DEFINITIONS END----'''
 
 # Generate GUI window
 window = ttk_b.Window(themename = theme["default"])

@@ -28,6 +28,7 @@ class Session:
         self.meas = Measurement(dev)    # Class object of measurement to be used
         self.fclist = loadcorrection('tbaf1m.csv')      # Load correction info
         self.count = 0                  # Tracks number of measurements taken 
+        self.measure_dict = {}          # Current measurement dictionary
 
         # Parent dictionary. Contains filename, data of creation, description
         # and list of measurements
@@ -52,7 +53,6 @@ class Session:
             self.savefilepath = f'{save_folder}/{savefilename}'
 
         else:
-
             self.savefilpath = f'{self.savefilepath}_{date}_{start_time}'
 
         self.parent_dict["Date Created"] = date
@@ -62,12 +62,16 @@ class Session:
 
     # Iterate 1 measurement
     def measure(self):
+
+        # Clear current measure dictionary
+        self.measure_dict = {}
+
         curr_time = datetime.now()
         logtime = curr_time.strftime("%H%M%S")
         # Initalise dictionary for current measurement 
-        measure_dict = {}
-        measure_dict["TimeStamp"] = logtime
-        measure_dict["Configuration"] = self.meas.cfg
+        
+        self.measure_dict["TimeStamp"] = logtime
+        self.measure_dict["Configuration"] = self.meas.cfg
 
         # Clear buffers
         data = []      
@@ -87,31 +91,31 @@ class Session:
         data = applycorrection(data, datax, self.fclist)
         
         # Save data to dictionary
-        measure_dict["Sig_Level"] = data
-        measure_dict["Frequency"] = datax
+        self.measure_dict["Sig_Level"] = data
+        self.measure_dict["Frequency"] = datax
 
         # Generate plot
         #plot(measure_dict)
-        return measure_dict
+        return self.measure_dict
 
 
     # save dictionary to file
-    def savemeasure(self, meas_dict, meas_name = '', note = ''):
+    def savemeasure(self, meas_name = '', note = ''):
 
-        meas_dict["Name"] = meas_name
-        meas_dict["Note"] = note
+        self.measure_dict["Name"] = meas_name
+        self.measure_dict["Note"] = note
         
         # Assign new measurement to parent dictionary
-        if meas_dict['Name'] == '':
-            self.parent_dict["measure" + str(self.count)] = meas_dict
+        if self.measure_dict['Name'] == '':
+            self.parent_dict["measure" + str(self.count)] = self.measure_dict
         else:
-            self.parent_dict["measure" + str(self.count) + '_' + meas_dict['Name']] = meas_dict
+            self.parent_dict["measure" + str(self.count) + '_' + self.measure_dict['Name']] = self.measure_dict
 
         # Save updated parent dictionary to file
         # Note: Cant save specific measurement each time as the json dump cannot append to file,
         # instead it overwrites it. hence I append measurement to a dctionary containing all measurements
         # and then save
-        file = f'{self.savefilename}.json'
+        file = f'{self.savefilepath}.json'
         with open(file, mode = "w") as f:
             json.dump(self.parent_dict, f, indent=4)
 
