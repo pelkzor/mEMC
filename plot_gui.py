@@ -9,7 +9,6 @@ from tkinter import ttk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-from matplotlib.widgets import Slider
 '''
 Add name of measurement. "name" field to be added.display in measure list box
 '''
@@ -25,6 +24,7 @@ settings_dir_path = ".settings"   # Saves the folder and file to store settings 
 theme_file_path = settings_dir_path + "/theme.json" # Theme settings
 configs_file_path = settings_dir_path + "/configs.json"   # Measurement configurations
 
+dev = None
 #dev = emc.DSA832()      # Create a device object representing the device used to get readings
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
@@ -381,11 +381,14 @@ class measure_session():
         self.curr_directory = os.getcwd()   # Get current directory
         self.meas_count = 0         # Tracks how many measurements have been taken in a session
         self.session_obj = None     # Each sessions object
+        self.session_description = ''   # Current sessions description given by user
 
         # Widgets
         self.meas_configs = []  # List of all measurement configurations available
         self.config_dropdown = None
         self.filepath = None
+        self.new_measurement_button = None  # New measurement button
+        self.save_measurement_button = None    # Save measurement button
                 
         # Parent window size
         sizex = 1600
@@ -425,7 +428,7 @@ class measure_session():
         self.create_parent_frames()
 
 
-    ''' General Functions '''
+    ''' Frame Definition Functions '''
 
     ''' UI for Parent Window Generation Functions '''
     
@@ -598,86 +601,7 @@ class measure_session():
 
         return config_dict
 
-    '''Function Description: Loads the configuration json file with
-    all configurations for measurements. If it does not exist,
-    creates it with default configurations
-    '''
-    def load_meas_configfile(self):
-        
-        self.meas_configs = []
-        
-        # Check if the configs json file exists
-        if os.path.isfile(configs_file_path):
-            # If yes, open and read it
-            with open(configs_file_path, 'r') as f:
-                self.meas_configs = json.load(f)
-        
-        else:
-            # If not, load default names
-            for i in range(emc.Config.CONFIGS_AVAIL):
-                self.meas_configs.append(emc.Config.get_config(i))
-        
-    def save_configs(self):
-        
-        # Save new added config to config file
-        # Write to file
-        data = []
-        for i in self.meas_configs:
-            data.append(i)
-        with open(configs_file_path, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
-
-
-    def get_available_config_names(self):
-        
-        meas_config_names = []
-
-        self.load_meas_configfile()
-        for i in self.meas_configs:
-            meas_config_names.append(i['Name'])
-
-        return meas_config_names
-
-
-    def update_para_widgets(self, widgets, state = 'readonly'):
-        curr_config = None
-        # Find confguration parameters of currently
-        # selected config
-        config_name = self.config_dropdown.get()
-        for i in self.meas_configs:
-            if (config_name == i["Name"]):
-                curr_config = i
-                break
-
-        # enable edits to textboxes
-        for i in widgets:
-            widgets[i].config(state='normal')
-            # Clear each entrybox
-            widgets[i].delete('0',END)
-
-        # insert new data 
-        widgets['continuous'].insert(END, curr_config['continuous'])
-        widgets["fstart"].insert(END, curr_config['fstart'])
-        widgets["fstop"].insert(END, curr_config['fstop'])
-        widgets["rbw"].insert(END, curr_config['rbw'])
-        widgets["vbw"].insert(END, curr_config['vbw'])
-        widgets["amp"].insert(END, curr_config['amp'])
-        widgets["atten"].insert(END, curr_config['amp'])
-        widgets["detector"].insert(END, curr_config['detector'])
-        widgets["emifilter"].insert(END, curr_config['emifilter'])
-        widgets["sweeppoints"].insert(END, curr_config['sweeppoints'])
-        widgets["sweepcount"].insert(END, curr_config['sweepcount'])
-        widgets["tracemode"].insert(END, curr_config['tracemode'])
-        widgets["unit"].insert(END, curr_config['unit'])
-        widgets["offset"].insert(END, curr_config['offset'])
-        #widgets["step"].insert(END, curr_config['step'])
-        widgets["xscale"].insert(END, curr_config['xscale'])
-
-        if state == 'readonly':
-            # disable edits to textboxes
-            for i in widgets:
-                widgets[i].config(state='readonly')
-
+    
     '''
     Function Description: Creates the configuration frame. Has a dropdown for
     possible configurations, a button to add new and textboxes to display
@@ -737,12 +661,15 @@ class measure_session():
         pos_save_measurement_button         = 0,1
         pos_peaks_config_frame              = 0,2
 
-        new_measurement_button = define_button(frame_buttons, pos_new_measurement_button[0],
-                                               pos_new_measurement_button[1], sticky=NSEW, text="New Measurement",
-                                               function_call=self.cb_create_new_measurement_window)
-        save_measurement_button = define_button(frame_buttons, pos_save_measurement_button[0],
-                                                pos_save_measurement_button[1], sticky=NSEW, text="Save Masurement")
-        
+        self.new_measurement_button = define_button(frame_buttons, pos_new_measurement_button[0],
+                                               pos_new_measurement_button[1], sticky=NSEW, text="New Measurement"
+                                               ,function_call=self.cb_new_measure)
+        self.new_measurement_button.config(state='disabled')
+        self.save_measurement_button = define_button(frame_buttons, pos_save_measurement_button[0],
+                                                pos_save_measurement_button[1], sticky=NSEW, text="Save Masurement",
+                                                function_call=self.cb_create_save_measurement_window)
+        self.save_measurement_button.config(state='disabled')
+
         # define a nested frame for the peaks configurations
         self.create_frame_peaks_config(frame_buttons, pos_peaks_config_frame)
         
@@ -858,10 +785,92 @@ class measure_session():
         self.create_frame_graph(pos_graph_frame)
         self.create_frame_buf(pos_buf_frame)
 
+    '''Configurations Functions'''
+
+    '''Function Description: Loads the configuration json file with
+    all configurations for measurements. If it does not exist,
+    creates it with default configurations
+    '''
+    def load_meas_configfile(self):
+        
+        self.meas_configs = []
+        
+        # Check if the configs json file exists
+        if os.path.isfile(configs_file_path):
+            # If yes, open and read it
+            with open(configs_file_path, 'r') as f:
+                self.meas_configs = json.load(f)
+        
+        else:
+            # If not, load default names
+            for i in range(emc.Config.CONFIGS_AVAIL):
+                self.meas_configs.append(emc.Config.get_config(i))
+        
+    def save_configs(self):
+        
+        # Save new added config to config file
+        # Write to file
+        data = []
+        for i in self.meas_configs:
+            data.append(i)
+        with open(configs_file_path, 'w') as json_file:
+            json.dump(data, json_file, indent=4)
+
+
+    def get_available_config_names(self):
+        
+        meas_config_names = []
+
+        self.load_meas_configfile()
+        for i in self.meas_configs:
+            meas_config_names.append(i['Name'])
+
+        return meas_config_names
+
+
+    def update_para_widgets(self, widgets, readonly = TRUE):
+        curr_config = None
+        # Find confguration parameters of currently
+        # selected config
+        config_name = self.config_dropdown.get()
+        for i in self.meas_configs:
+            if (config_name == i["Name"]):
+                curr_config = i
+                break
+
+        # enable edits to textboxes
+        for i in widgets:
+            widgets[i].config(state='normal')
+            # Clear each entrybox
+            widgets[i].delete('0',END)
+
+        # insert new data 
+        widgets['continuous'].insert(END, curr_config['continuous'])
+        widgets["fstart"].insert(END, curr_config['fstart'])
+        widgets["fstop"].insert(END, curr_config['fstop'])
+        widgets["rbw"].insert(END, curr_config['rbw'])
+        widgets["vbw"].insert(END, curr_config['vbw'])
+        widgets["amp"].insert(END, curr_config['amp'])
+        widgets["atten"].insert(END, curr_config['amp'])
+        widgets["detector"].insert(END, curr_config['detector'])
+        widgets["emifilter"].insert(END, curr_config['emifilter'])
+        widgets["sweeppoints"].insert(END, curr_config['sweeppoints'])
+        widgets["sweepcount"].insert(END, curr_config['sweepcount'])
+        widgets["tracemode"].insert(END, curr_config['tracemode'])
+        widgets["unit"].insert(END, curr_config['unit'])
+        widgets["offset"].insert(END, curr_config['offset'])
+        #widgets["step"].insert(END, curr_config['step'])
+        widgets["xscale"].insert(END, curr_config['xscale'])
+
+        if readonly == TRUE:
+            # disable edits to textboxes
+            for i in widgets:
+                widgets[i].config(state='readonly')
 
 
     ''' Callback Functions '''
 
+    '''----CONFIG WINDOW CALLBACKS START ----'''
     '''
     Function Description: Defines a new window called when the new configuration button
     is pressed. Allows user to fill a new configuration which is saved.
@@ -878,9 +887,17 @@ class measure_session():
         window.focus()
         # Install window close routine
         window.protocol("WM_DELETE_WINDOW",window.destroy)
+        # Ensure frame can expand to window borders
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
 
         # Create a frame 
         frame_config = define_frame(window, 0, 0, NW)
+        # Ensure widgets expand as required
+        frame_config.columnconfigure(0, weight=1)
+        frame_config.rowconfigure(0, weight=1)
+        frame_config.columnconfigure(1, weight=1)
+        frame_config.rowconfigure(1, weight=1)
 
         # Define entry box not defined in function to create parameter widgets
         config_name_entry = define_entry_textbox(frame_config, 1, 0, sticky=NSEW)
@@ -888,7 +905,7 @@ class measure_session():
 
         # Define config widgets
         widgets = self.create_config_para_widgets(frame_config, state = 'normal')
-        self.update_para_widgets(widgets, state = 'normal')
+        self.update_para_widgets(widgets, readonly=FALSE)
 
         # Create a frame for save and cancel buttons
         save_frame = define_frame(window, 0, 1, frame_sticky=SE)
@@ -940,24 +957,14 @@ class measure_session():
         window.destroy()
 
         return
+    '''----CONFIG WINDOW CALLBACKS END ----'''
 
-
-    def cb_new_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
-
-        # Get measurement
-        # Save the new measurements name and description as required
-        self.session_obj.measure(meas_name=meas_name, note=meas_desc, 
-                                 count=self.meas_count)
-        
-        # Destroy the save window
-        window.destroy()
-
-
+    '''----NEW MEASUREMENT WINDOW CALLBACKS START----'''
     '''
     Function Description: Defines a new window called when the save measurement button is
     pressed. Allows user to fill a measurement name and notes
     '''
-    def cb_create_new_measurement_window(self):
+    def cb_create_save_measurement_window(self):
         # Create new window over the main window
         window = Toplevel()
         window.geometry("400x200+300+400")
@@ -983,7 +990,7 @@ class measure_session():
 
         # Create widgets
         new_meas_label = define_label(frame, 0, 0, "Name")
-        description_lable = define_label(frame, 0, 1, "Notes")
+        description_label = define_label(frame, 0, 1, "Notes")
 
         new_meas_entrybox = define_entry_textbox(frame, 1, 0, sticky=EW)
         new_meas_entrybox.config(state='normal')
@@ -1001,6 +1008,59 @@ class measure_session():
         # Kill the save window
         cancel_button = define_button(nested_frame, 1, 0, "Cancel", function_call=window.destroy)
 
+    '''----NEW MEASUREMENT WINDOW CALLBACKS END----'''
+
+    '''----GENERAL CALLBACKS START----'''
+
+    def cb_new_session_descr_save_button_pressed(self, window, desc):
+
+        self.session_description = desc
+
+        # check if a description was given, else mark as NA
+        if self.session_description == '':
+            self.session_description = 'NA'
+
+        window.destroy()
+
+
+    def create_new_session_desc_window(self):
+        # Create new window over the main window
+        window = Toplevel()
+        window.geometry("400x200+300+400")
+        #window.resizable(width=False, height=False)
+        window.title("Session Description")
+        # Ensure frame can expand to window borders
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
+
+        # Disabled access to main terminal window
+        window.grab_set()
+        window.focus()
+        # Install window close routine
+        window.protocol("WM_DELETE_WINDOW",window.destroy)
+
+        # Create a frame 
+        frame = define_frame(window, 0, 0, frame_sticky=NSEW)
+        frame.grid(padx=5, pady=5)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(0, weight=1)
+        
+        description_scrollbox = define_scroll_textbox(frame, 0, 0, 40, 5, sticky=NSEW)
+
+        # Create a nested frame for save and cancel buttons
+        nested_frame = define_frame(frame, 0, 1, frame_sticky=SE)
+        
+        # Saves the name and description given by the user
+        save_button = define_button(nested_frame, 
+                                    0, 0, " Save ", 
+                                    function_call= lambda: self.cb_new_session_descr_save_button_pressed(window,  
+                                                                desc=description_scrollbox.get('1.0', END)))
+        # Kill the save window
+        cancel_button = define_button(nested_frame, 1, 0, "Cancel", function_call=window.destroy)
+
+        # pause program till this window is closed
+        self.window.wait_window(window)
+            
 
     '''
     Function Description: Defines a new window called when the new session
@@ -1012,23 +1072,54 @@ class measure_session():
         # Destroy previous session object
         if self.session_obj != None:
             self.session_obj.destroy()
+            self.session_description = ''
 
         # update new savefile path with a savefile prompt
         self.filepath = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[('JSON File', '.json')])
 
-        # Get filename
-        file_name = os.path.basename(self.filepath)
+        # User cancels save
+        if self.filepath == '':
+            return
+
+        # Open session description window            
+        self.create_new_session_desc_window()    
+
+        # Check if cancel button was pressed in the new session description window
+        if self.session_description == '':
+            return 
 
         # Enable other widgets
 
         # load current filepath in textbox
+        self.session_entry_box.config(state='normal')
         self.session_entry_box.delete(0, END)
         self.session_entry_box.insert(END, self.filepath)
+        self.session_entry_box.config(state='readonly')
 
         # Create sessions object
         # /todo add ability to give description
-        self.session_obj = emc.Session(dev, file_name, "")
-        self.session_obj.begin()
+        self.session_obj = emc.Session(dev, self.filepath, "")
+
+        # Enable new measurement button
+        self.new_measurement_button.config(state='normal')
+        self.save_measurement_button.config(state='normal')
+
+
+    def cb_new_measure(self):
+
+        # Get a new meausurement
+        self.session_obj.measure()
+
+    def cb_new_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
+
+        # Get measurement
+        # Save the new measurements name and description as required
+        self.session_obj.savemeasure(self.filepath, meas_name=meas_name, note=meas_desc)
+        
+        # Destroy the save window
+        window.destroy()
+
+    '''----GENERAL CALLBACKS END----'''
 
 # Generates a session plot window
 class plot_session():

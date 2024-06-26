@@ -22,65 +22,52 @@ return: NA
 
 class Session:
 
-    def __init__ (self, dev, savefilename = "", desc = ""):
-        self.savefilename = savefilename
+    def __init__ (self, dev, savefilepath = "", desc = ""):
+        self.savefilepath = savefilepath
         self.session_desc = desc        # description of session to be added to file
         self.meas = Measurement(dev)    # Class object of measurement to be used
         self.fclist = loadcorrection('tbaf1m.csv')      # Load correction info
+        self.count = 0                  # Tracks number of measurements taken 
 
         # Parent dictionary. Contains filename, data of creation, description
         # and list of measurements
         self.parent_dict = {}
 
-
-    # Creates save folder if not already existing
-    # Saves session metadata in dictionary
-    def begin (self):
-
         # Append date and time to given folder and file name
         curr_time = datetime.now()
         start_time = curr_time.strftime("%H%M%S")
         date = curr_time.strftime("%Y%m%d")
-                
-        # Create a save folder
-        save_folder = "Measurements"
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
+                       
+        # Append time and date to save file path
+        # If no path given, save to default folder in current folder
+        if self.savefilepath == "":
 
-        
-        # Append time and date to save file name
-        # If no name given, append "Record"
-        if self.savefilename == "":
-            self.savefilename = f'Record_{date}_{start_time}'
+            # Create a default save folder
+            save_folder = "Measurements"
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
+            
+            savefilename = f'Record_{date}_{start_time}'
+            # Append directory to file name
+            self.savefilepath = f'{save_folder}/{savefilename}'
+
         else:
-            self.savefilename = f'{self.savefilename}_{date}_{start_time}'
 
-        # Append directory to file name
-        self.savefilename = f'{save_folder}/{self.savefilename}'
+            self.savefilpath = f'{self.savefilepath}_{date}_{start_time}'
 
         self.parent_dict["Date Created"] = date
-        self.parent_dict["File Name"] = self.savefilename
+        self.parent_dict["File Name"] = os.path.basename(self.savefilpath)
         self.parent_dict["Description"] = self.session_desc
 
-        # Start collecting data
-        #measure_count = 0
-        #while(1):
-        #    self.measure(measure_count)
-        #    # Increment measurement counter
-        #    measure_count += 1
 
     # Iterate 1 measurement
-    def measure(self, meas_name = '', note = '', count=0):
+    def measure(self):
         curr_time = datetime.now()
         logtime = curr_time.strftime("%H%M%S")
         # Initalise dictionary for current measurement 
         measure_dict = {}
         measure_dict["TimeStamp"] = logtime
         measure_dict["Configuration"] = self.meas.cfg
-
-        # request notes and save
-        #note = input("Write Note Now: ")
-        measure_dict["Note"] = note
 
         # Clear buffers
         data = []      
@@ -104,37 +91,32 @@ class Session:
         measure_dict["Sig_Level"] = data
         measure_dict["Frequency"] = datax
 
-        # Append to Parent dictionary
-        if meas_name == '':
-            self.parent_dict["measure" + str(count)] = measure_dict
-        else:
-            self.parent_dict["measure" + str(count) + '_' + meas_name] = measure_dict
-
-        # Save current parent dictionary to file
-        #self.savedata(f'{self.savefilename}') 
-
         # Generate plot
-        #plot(data, datax, note, f'{self.savefilename}_measure_{count}')
+        #plot(measure_dict)
 
-        # Modify Configuration
-        #print("Modify Config:")
-        #print("0. No change")
-        #print("1. Default\n2. Condqp - Conducted emf w/ quasi filter")
-        #print("3. Cond1 - Conducted emf (Generic)")
-        #print("4. Cond2 - Conducted emf (Generic)")
-        #print("5. Rad1 - Radiation emmission")
-        #print("6. Radcoarse - Radition Emmission (Coarse)")
-        #print("7. Mt100 - Measurement transformer specific")
-        #config_opt = int(input())
-        # only call config change methods if default option is not selected
-        #if(config_opt > 0):
-        #    self.meas.update_config(config_opt)
 
     # save dictionary to file
-    def savedata(self, file):
-        file = f'{file}.json'
+    def savemeasure(self, meas_dict, meas_name = '', note = ''):
+
+        meas_dict['Name'] = meas_name
+        meas_dict["Note"] = note
+        
+        # Assign new measurement to parent dictionary
+        if meas_dict['Name'] == '':
+            self.parent_dict["measure" + str(self.count)] = meas_dict
+        else:
+            self.parent_dict["measure" + str(self.count) + '_' + meas_dict['Name']] = meas_dict
+
+        # Save updated parent dictionary to file
+        # Note: Cant save specific measurement each time as the json dump cannot append to file,
+        # instead it overwrites it. hence I append measurement to a dctionary containing all measurements
+        # and then save
+        file = f'{self.savefilename}.json'
         with open(file, mode = "w") as f:
             json.dump(self.parent_dict, f, indent=4)
+
+        # Update measurement counter
+        self.count += 1
 
 
 '''
