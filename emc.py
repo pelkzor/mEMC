@@ -378,7 +378,7 @@ def getpeaks(lag, threshold, influence, data, datax):
     #return tuple with lists for datax and data 
     pf = [datax[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
     pv = [data[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
-    return pf,pv
+    return [pf,pv]
 
 def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Frequency", 
             ylabel = "dBuV", label = None, title = None): 
@@ -399,7 +399,7 @@ def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Fr
         axis.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
         
     if peaklist:            
-        axis.scatter(peaklist[0] , peaklist[1])
+        axis.scatter(peaklist[0] , peaklist[1], edgecolors='#e86231', facecolor='none')
 
     axis.set_title(title)
     axis.set_xlabel(xlabel)

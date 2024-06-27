@@ -413,6 +413,8 @@ class measure_session():
         self.meas_count = 0                 # Tracks how many measurements have been taken in a session
         self.session_obj = None             # Each sessions object
         self.session_description = ''       # Current sessions description given by user
+        self.meas = None                    # Current measurement data
+        self.peakslist = []                 # List of x,y datapoints of peaks in current measurement plot
 
         # Widgets
         self.meas_configs = []              # List of all measurement configurations available
@@ -422,7 +424,15 @@ class measure_session():
         self.save_measurement_button = None     # Save measurement button
         self.ax = None          # Handles plot
         self.canvas = None      # Handles canvas where plot is placed
-
+        self.lags_textbox = None        # Lags textbox tkinter object
+        self.threshold_textbox = None   # threshold textbox tkinter object
+        self.influence_textbox = None   # Influence textbox tkinter object
+        
+        # Create stringvar variables to track when an update to the entry box is made
+        self.lags_var = StringVar(value=0)
+        self.threshold_var = StringVar(value=0)
+        self.influence_var = StringVar(value=0)
+        
         # Parent window size
         sizex = 1600
         sizey = 900
@@ -614,26 +624,21 @@ class measure_session():
         influence_label = define_label(frame_peaks_config, pos_influence_label[0], 
                                            pos_influence_label[1], text="Influence", sticky=W)
         
-        # Create stringvar variables to track when an update to the entry box is made
-        lags_var = StringVar()
-        threshold_var = StringVar()
-        influence_var = StringVar()
-
         # Set up a trace on the StringVar to call on_entry_change whenever it changes
-        lags_var.trace_add("write", None)   # PLACE PLOTTING FUNCTIONHERE
-        threshold_var.trace_add("write", None)   # PLACE PLOTTING FUNCTIONHERE
-        influence_var.trace_add("write", None)   # PLACE PLOTTING FUNCTIONHERE
+        self.lags_var.trace_add("write", self.cb_peaks_update)   
+        self.threshold_var.trace_add("write", self.cb_peaks_update)   
+        self.influence_var.trace_add("write", self.cb_peaks_update)   
         
         '''Define entry box widgets'''
-        lags_textbox = define_entry_textbox(frame_peaks_config, pos_lags_entrybox[0], 
-                                            pos_lags_entrybox[1], state='normal')
-        lags_textbox.config(textvariable=lags_var)
-        threshold_textbox = define_entry_textbox(frame_peaks_config, pos_threshold_entrybox[0], 
-                                         pos_threshold_entrybox[1], state='normal')
-        threshold_textbox.config(textvariable=threshold_var)
-        influence_textbox = define_entry_textbox(frame_peaks_config, pos_influence_entrybox[0],
-                                         pos_influence_entrybox[1], state='normal') 
-        influence_textbox.config(textvariable=influence_var)   
+        self.lags_textbox = define_entry_textbox(frame_peaks_config, pos_lags_entrybox[0], 
+                                            pos_lags_entrybox[1], state='disable')
+        self.lags_textbox.config(textvariable=self.lags_var)
+        self.threshold_textbox = define_entry_textbox(frame_peaks_config, pos_threshold_entrybox[0], 
+                                         pos_threshold_entrybox[1], state='disable')
+        self.threshold_textbox.config(textvariable=self.threshold_var)
+        self.influence_textbox = define_entry_textbox(frame_peaks_config, pos_influence_entrybox[0],
+                                         pos_influence_entrybox[1], state='disable') 
+        self.influence_textbox.config(textvariable=self.influence_var)   
     
     '''
     Function Description: Creates a frame to host the matplotlib interactive graph
@@ -1251,6 +1256,11 @@ class measure_session():
         self.new_measurement_button.config(state='normal')
         self.save_measurement_button.config(state='normal')
 
+        # Enable peaks list entryboxes
+        self.lags_textbox.config(state='normal')
+        self.threshold_textbox.config(state='normal')
+        self.influence_textbox.config(state='normal')
+
     '''----NEW SESSION WINDOW CALLBACKS END----'''
 
     '''----GENERAL CALLBACKS START----'''
@@ -1266,10 +1276,51 @@ class measure_session():
     def cb_new_measure(self):
 
         # Get a new measurement
-        meas = self.session_obj.measure()
+        self.meas = self.session_obj.measure()
 
         # Plot new data on canvas in GUI screen
-        emc.plotSingleCanvas(meas, canvas=self.canvas, axis=self.ax)
+        emc.plotSingleCanvas(self.meas, canvas=self.canvas, axis=self.ax, peaklist=self.peakslist)
+
+    '''
+    Function Description: Called when an update to the peaks entryboxes is made
+
+    Parameters: NA
+
+    Returns: NA
+    '''
+    def cb_peaks_update(self, name, index, mode):
+        
+        # Get data from entryboxes
+        lags = self.lags_textbox.get()
+        threshold = self.threshold_textbox.get()
+        influence = self.influence_textbox.get()
+
+        # Return if entrybox is empty
+        if lags == '' or threshold == '' or influence == '':
+            return
+
+        # Ensure inputs are ints
+        try:
+            int_value = int(lags)
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(threshold)
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(influence)
+        except ValueError:
+            return
+
+        # Calculate peaks
+        self.peakslist = emc.getpeaks(int(lags), int(threshold), int(influence), self.meas['Sig_Level'], self.meas['Frequency'])
+
+        # replot graph
+        emc.plotSingleCanvas(self.meas, canvas=self.canvas, axis=self.ax, peaklist=self.peakslist)
+        
 
     '''----GENERAL CALLBACKS END----'''
 
