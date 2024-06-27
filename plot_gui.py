@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import emc
 
 '''Constants'''
-MAX_POSSIBLE_MEASUREMENTS   = 1000
-DEFAULT_PADDING             = 5
+MAX_POSSIBLE_MEASUREMENTS   = 1000      # Maximum measurement readable from a session json files
+DEFAULT_PADDING             = 5         # Padding for frame in the GUI
 
 '''Global Variables'''
 settings_dir_path = ".settings"   # Saves the folder and file to store settings in
@@ -281,6 +281,11 @@ ax - subplot object
 '''
 def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel = "x-axis", 
                 ylabel = "y-axis", title = "Plot", toolbar = False):
+
+    # Clear previous plots
+    plt.cla()
+    plt.close()
+
     # Create a Matplotlib figure and plot
     fig, ax = plt.subplots(1,1)
     ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
@@ -1700,6 +1705,7 @@ class plot_session():
     Results: NA
     '''
     def cb_pltb_pressed(self):
+        
         # plot plotting dictionary
         emc.plotall(self.to_plot)
 

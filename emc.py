@@ -383,6 +383,10 @@ def getpeaks(lag, threshold, influence, data, datax):
 def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Frequency", 
             ylabel = "dBuV", label = None, title = None): 
         
+    # Clear previous plots
+    plt.cla()
+    plt.close()
+
     fclist = loadcorrection('tbaf1m.csv')
     datax = meas["Frequency"]
     data = applycorrection(meas["Sig_Level"], datax, fclist)
@@ -407,35 +411,39 @@ def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Fr
     return axis
 
 
-# Plot waveform
-def plotall(measurements, fig = plt, ref=None, peaklist = None, xlabel = "frequency", 
+# Plot waveform         # fig = plt
+def plotall(measurements, ref=None, peaklist = None, xlabel = "frequency", 
             ylabel = "dBuV", title = "Measurement Plot", label = ""): 
-        
+    
+    # Clear previous plots
+    plt.cla()
+    plt.close()
+
+    fig, ax = plt.subplots()  # Create a new figure and axes
     fclist = loadcorrection('tbaf1m.csv')
-    #plt.figure()
+    plt.cla()
     for meas in measurements:
         datax = meas["Frequency"]
         data = applycorrection(meas["Sig_Level"], datax, fclist)
 
         #limit = [ 50 if x < 230000000 else 58 for x in datax]
         #plt.plot(datax, data, datax, limit, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
-        fig.plot(datax, data, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
+        ax.plot(datax, data, linewidth = 0.5, label = f'{meas["JSON_Name"]}/{meas["Name"]}')
         if ref:
-            fig.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
+            ax.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
             
         if peaklist:            
-            fig.scatter(peaklist[0] , peaklist[1])
+            ax.scatter(peaklist[0] , peaklist[1])
 
-    #plt.gcf().text(0.01,0.95, "Notes: " + note)
-    fig.title(title)
-    fig.xlabel(xlabel)
-    fig.ylabel(ylabel)
-    #fig.ylim((0,60))
-    fig.tight_layout()
-    fig.grid()
-    fig.legend()
-    fig.show()
-    return fig
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend()
+    ax.grid()
+
+    plt.show()
+    plt.close(fig)
+
 
 def list_json_files(directory = ''):
 
