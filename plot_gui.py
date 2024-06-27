@@ -535,16 +535,19 @@ class measure_session():
                                                 pos_config_dropdown[1], content_list=config_list, sticky=NW)
         # Set the first configuration as the default on startup
         self.config_dropdown.set(config_list[0])
-        # Create widgets
-        config_para_widgets = self.create_config_para_widgets(frame_config)
+        '''Create widgets'''
+        # Create label widgets
+        self.create_config_para_label_widgets(frame_config)
+        # Create entry box widgets
+        config_para_widgets = self.create_config_para_entry_widgets(frame_config)
         # Bind a function to update parameter textboxes when user makes a selection
-        self.config_dropdown.bind("<<ComboboxSelected>>", lambda event: self.update_para_widgets(widgets=config_para_widgets))
+        self.config_dropdown.bind("<<ComboboxSelected>>", lambda event: self.update_para_entry_widgets(widgets=config_para_widgets))
 
         config_new_button = define_button(frame_config, pos_new_config_button[0], 
                                           pos_new_config_button[1], text="New Config", sticky=NW,
                                           function_call=self.cb_create_add_config_window)
         
-        self.update_para_widgets(config_para_widgets)
+        self.update_para_entry_widgets(config_para_widgets)
        
     '''
     Function Description: Creates the button frame. It has the save and new measurement
@@ -706,16 +709,16 @@ class measure_session():
         self.create_frame_buf(pos_buf_frame)
 
     '''Configurations Functions'''
-    '''
-    Function Description: Creates all the widgets associated with
-    configuration parameters
 
-    Parameters: frame_config - Configuration frame of parent window
-    state - Determines whether widgets created are disabled upon creation or left active
-
-    Returns: config_dictionary - dictionary of individual configuration parameter entry boxes tkinter objects 
     '''
-    def create_config_para_widgets(self, frame_config, state = 'disabled'):
+    Function Description: Creates the labels used in both the main window
+    config frame and the add config window
+
+    Parameters: frame_config - parent frame
+
+    Returns: NA
+    '''
+    def create_config_para_label_widgets(self, frame_config):
         
         '''Widget Y,X Position'''
         pos_config_label                    = 0,0
@@ -737,24 +740,7 @@ class measure_session():
         pos_config_offset_label             = 0,15
         pos_config_step_label               = 0,16
         pos_config_xscale_label             = 0,17
-
-        pos_config_continuous_textbox        = 1,2
-        pos_config_fstart_textbox           = 1,3
-        pos_config_fstop_textbox            = 1,4
-        pos_config_rbw_textbox              = 1,5
-        pos_config_vbw_textbox              = 1,6
-        pos_config_amp_textbox              = 1,7
-        pos_config_atten_textbox            = 1,8
-        pos_config_detector_textbox         = 1,9
-        pos_config_emifilter_textbox        = 1,10
-        pos_config_sweeppoints_textbox      = 1,11
-        pos_config_sweepcount_textbox       = 1,12
-        pos_config_tracemode_textbox        = 1,13
-        pos_config_unit_textbox             = 1,14
-        pos_config_offset_textbox           = 1,15
-        pos_config_step_textbox             = 1,16
-        pos_config_xscale_textbox           = 1,17
-
+    
         '''Define labels'''
         config_label = define_label(frame_config, pos_config_label[0], pos_config_label[1], text="Configuration Name", sticky=NSEW)
         config_para_label = define_label(frame_config, pos_config_para_label[0], pos_config_para_label[1], text="----- Parameters -----", sticky=EW)
@@ -788,10 +774,183 @@ class measure_session():
                                          pos_config_unit_label[1], text="unit", sticky=NSEW)
         config_offset_label = define_label(frame_config, pos_config_offset_label[0], 
                                            pos_config_offset_label[1], text="offset", sticky=NSEW)
-        config_step_label = define_label(frame_config, pos_config_step_label[0], 
-                                         pos_config_step_label[1], text="step", sticky=NSEW)
+        #config_step_label = define_label(frame_config, pos_config_step_label[0], 
+        #                                 pos_config_step_label[1], text="step", sticky=NSEW)
         config_xscale_label = define_label(frame_config, pos_config_xscale_label[0], 
                                            pos_config_xscale_label[1], text="xscale", sticky=NSEW)
+        
+
+    '''
+    Function Description: Creates all the widgets associated with
+    the add configuration window parameters
+
+    Parameters: frame_config - Configuration frame of parent window
+
+    Returns: config_dictionary - dictionary of individual configuration parameter 
+            entry/dropdown boxes as tkinter objects 
+    '''
+    def create_config_para_dropdown_widgets(self, frame_config):
+        
+        '''Y,X position coordinates'''
+        pos_config_continuous_textbox       = 1,2
+        pos_config_fstart_textbox           = 1,3
+        pos_config_fstop_textbox            = 1,4
+        pos_config_rbw_textbox              = 1,5
+        pos_config_vbw_textbox              = 1,6
+        pos_config_amp_textbox              = 1,7
+        pos_config_atten_textbox            = 1,8
+        pos_config_detector_textbox         = 1,9
+        pos_config_emifilter_textbox        = 1,10
+        pos_config_sweeppoints_textbox      = 1,11
+        pos_config_sweepcount_textbox       = 1,12
+        pos_config_tracemode_textbox        = 1,13
+        pos_config_unit_textbox             = 1,14
+        pos_config_offset_textbox           = 1,15
+        pos_config_step_textbox             = 1,16
+        pos_config_xscale_textbox           = 1,17
+
+        # Load vars.json file. Used to populate drop downs with possible options
+        with open('vars.json','r') as f:
+            commands = json.loads(f.read())
+
+        '''Find the current configuration selected in configuration drop down'''
+        curr_config = None
+        # Find confguration parameters of currently
+        # selected config in the drop down
+        config_name = self.config_dropdown.get()
+        for i in self.meas_configs:
+            # Identify the configuration required
+            # Based on the name in the drop down
+            if (config_name == i["Name"]):
+                # Fill the local dictionary 
+                curr_config = i
+                break
+
+        '''Define entryboxes/dropdowns'''
+        '''The current configuration selected is used as default values in this instance of the add config window'''
+        config_continuous_dropdown = define_drop_down(frame_config, pos_config_continuous_textbox[0],
+                                                        pos_config_continuous_textbox[1], sticky=NSEW, 
+                                                        content_list=commands["continuous"]["enum"])
+        config_continuous_dropdown.set(curr_config['continuous'])
+
+        config_fstart_textbox = define_entry_textbox(frame_config, pos_config_fstart_textbox[0],
+                                                     pos_config_fstart_textbox[1], sticky=NSEW, state='normal')
+        config_fstart_textbox.insert(END, curr_config['fstart'])
+
+        config_fstop_textbox = define_entry_textbox(frame_config, pos_config_fstop_textbox[0],
+                                                    pos_config_fstop_textbox[1], sticky=NSEW, state='normal')
+        config_fstop_textbox.insert(END, curr_config['fstop'])
+
+        config_rbw_textbox = define_entry_textbox(frame_config, pos_config_rbw_textbox[0],
+                                                  pos_config_rbw_textbox[1], sticky=NSEW, state='normal')
+        config_rbw_textbox.insert(END, curr_config['rbw'])
+
+        config_vbw_textbox = define_entry_textbox(frame_config, pos_config_vbw_textbox[0],
+                                                  pos_config_vbw_textbox[1], sticky=NSEW, state='normal')
+        config_vbw_textbox.insert(END, curr_config['vbw'])
+
+        config_amp_dropdown = define_drop_down(frame_config, pos_config_amp_textbox[0],
+                                                  pos_config_amp_textbox[1], sticky=NSEW, 
+                                                  content_list=commands["amp"]["enum"])
+        config_amp_dropdown.set(curr_config['amp'])
+
+        config_atten_textbox = define_entry_textbox(frame_config, pos_config_atten_textbox[0],
+                                                    pos_config_atten_textbox[1], sticky=NSEW, state='normal')
+        config_atten_textbox.insert(END, curr_config['atten'])
+
+        config_detector_dropdown = define_drop_down(frame_config, pos_config_detector_textbox[0],
+                                                       pos_config_detector_textbox[1], sticky=NSEW, 
+                                                       content_list=commands["detector"]["enum"])
+        config_detector_dropdown.set(curr_config['detector'])
+
+        config_emifilter_dropdown = define_drop_down(frame_config, pos_config_emifilter_textbox[0],
+                                                        pos_config_emifilter_textbox[1], sticky=NSEW, 
+                                                        content_list=commands["emifilter"]["enum"])
+        config_emifilter_dropdown.set(curr_config['emifilter'])
+
+        config_sweeppoints_textbox = define_entry_textbox(frame_config, pos_config_sweeppoints_textbox[0],
+                                                          pos_config_sweeppoints_textbox[1], sticky=NSEW, state='normal')
+        config_sweeppoints_textbox.insert(END, curr_config['sweeppoints'])
+
+        config_sweepcount_textbox = define_entry_textbox(frame_config, pos_config_sweepcount_textbox[0],
+                                                         pos_config_sweepcount_textbox[1], sticky=NSEW, state='normal')
+        config_sweepcount_textbox.insert(END, curr_config['sweepcount'])
+
+        config_tracemode_dropdown = define_drop_down(frame_config, pos_config_tracemode_textbox[0],
+                                                        pos_config_tracemode_textbox[1], sticky=NSEW, 
+                                                        content_list=commands["tracemode"]["enum"])
+        config_tracemode_dropdown.set(curr_config['tracemode'])
+
+        config_unit_dropdown = define_drop_down(frame_config, pos_config_unit_textbox[0],
+                                                   pos_config_unit_textbox[1], sticky=NSEW, 
+                                                   content_list=commands["unit"]["enum"])
+        config_unit_dropdown.set(curr_config['unit'])
+
+        config_offset_textbox = define_entry_textbox(frame_config, pos_config_offset_textbox[0],
+                                                     pos_config_offset_textbox[1], sticky=NSEW, state='normal')
+        config_offset_textbox.insert(END, curr_config['offset'])
+
+        #config_step_dropdown = define_drop_down(frame_config, pos_config_step_textbox[0],
+        #                                           pos_config_step_textbox[1], sticky=NSEW)
+                                                   #content_list=commands["step"]["enum"])
+        #config_step_dropdown.set(curr_config['step'])
+
+        config_xscale_dropdown = define_drop_down(frame_config, pos_config_xscale_textbox[0],
+                                                     pos_config_xscale_textbox[1], sticky=NSEW, 
+                                                     content_list=commands["xscale"]["enum"])
+        config_xscale_dropdown.set(curr_config['xscale'])
+
+
+        '''Add to dictionary'''
+        config_dict = {}
+        config_dict['continuous'] = config_continuous_dropdown
+        config_dict["fstart"] = config_fstart_textbox
+        config_dict["fstop"] = config_fstop_textbox
+        config_dict["rbw"] = config_rbw_textbox
+        config_dict["vbw"] = config_vbw_textbox
+        config_dict["amp"] = config_amp_dropdown
+        config_dict["atten"] = config_atten_textbox
+        config_dict["detector"] = config_detector_dropdown
+        config_dict["emifilter"] = config_emifilter_dropdown
+        config_dict["sweeppoints"] = config_sweeppoints_textbox
+        config_dict["sweepcount"] = config_sweepcount_textbox
+        config_dict["tracemode"] = config_tracemode_dropdown
+        config_dict["unit"] = config_unit_dropdown
+        config_dict["offset"] = config_offset_textbox
+        #config_dict["step"] = config_step_dropdown
+        config_dict["xscale"] = config_xscale_dropdown
+
+        return config_dict
+
+    '''
+    Function Description: Creates all the widgets associated with
+    configuration parameters in main window
+
+    Parameters: frame_config - Configuration frame of parent window
+    state - Determines whether widgets created are disabled upon creation or left active
+
+    Returns: config_dictionary - dictionary of individual configuration parameter entry boxes tkinter objects 
+    '''
+    def create_config_para_entry_widgets(self, frame_config, state = 'disabled'):
+
+        '''Y,X position coordinates'''
+        pos_config_continuous_textbox       = 1,2
+        pos_config_fstart_textbox           = 1,3
+        pos_config_fstop_textbox            = 1,4
+        pos_config_rbw_textbox              = 1,5
+        pos_config_vbw_textbox              = 1,6
+        pos_config_amp_textbox              = 1,7
+        pos_config_atten_textbox            = 1,8
+        pos_config_detector_textbox         = 1,9
+        pos_config_emifilter_textbox        = 1,10
+        pos_config_sweeppoints_textbox      = 1,11
+        pos_config_sweepcount_textbox       = 1,12
+        pos_config_tracemode_textbox        = 1,13
+        pos_config_unit_textbox             = 1,14
+        pos_config_offset_textbox           = 1,15
+        pos_config_step_textbox             = 1,16
+        pos_config_xscale_textbox           = 1,17
+
         
         '''Define entryboxes'''
         config_continuous_textbox = define_entry_textbox(frame_config, pos_config_continuous_textbox[0],
@@ -822,8 +981,8 @@ class measure_session():
                                                    pos_config_unit_textbox[1], sticky=NSEW)
         config_offset_textbox = define_entry_textbox(frame_config, pos_config_offset_textbox[0],
                                                      pos_config_offset_textbox[1], sticky=NSEW)
-        config_step_textbox = define_entry_textbox(frame_config, pos_config_step_textbox[0],
-                                                   pos_config_step_textbox[1], sticky=NSEW)
+        #config_step_textbox = define_entry_textbox(frame_config, pos_config_step_textbox[0],
+        #                                           pos_config_step_textbox[1], sticky=NSEW)
         config_xscale_textbox = define_entry_textbox(frame_config, pos_config_xscale_textbox[0],
                                                      pos_config_xscale_textbox[1], sticky=NSEW)
 
@@ -844,7 +1003,7 @@ class measure_session():
         config_dict["tracemode"] = config_tracemode_textbox
         config_dict["unit"] = config_unit_textbox
         config_dict["offset"] = config_offset_textbox
-        config_dict["step"] = config_step_textbox
+        #config_dict["step"] = config_step_textbox
         config_dict["xscale"] = config_xscale_textbox
 
         # Set state to active if required
@@ -928,7 +1087,7 @@ class measure_session():
 
     Returns: NA
     '''
-    def update_para_widgets(self, widgets, readonly = TRUE):
+    def update_para_entry_widgets(self, widgets, readonly = TRUE):
         
         curr_config = None
         # Find confguration parameters of currently
@@ -971,6 +1130,8 @@ class measure_session():
             # disable edits to textboxes
             for i in widgets:
                 widgets[i].config(state='readonly')
+
+            widgets["xscale"].insert(END, curr_config['xscale'])
 
     '''
     Function Description: Creates a new window to save the 
@@ -1057,8 +1218,10 @@ class measure_session():
         config_name_entry.config(state='normal')
 
         # Define config widgets
-        widgets = self.create_config_para_widgets(frame_config, state = 'normal')
-        self.update_para_widgets(widgets, readonly=FALSE)
+        self.create_config_para_label_widgets(frame_config)
+        #widgets = self.create_config_para_entry_widgets(frame_config, state = 'normal')
+        #self.update_para_entry_widgets(widgets, readonly=FALSE)
+        widgets = self.create_config_para_dropdown_widgets(frame_config)
 
         # Create a frame for save and cancel buttons
         save_frame = define_frame(window, 0, 1, frame_sticky=SE)
@@ -1102,7 +1265,12 @@ class measure_session():
         new_config['xscale'] = widgets['tracemode'].get()
 
         # Perform input validation
-        # Return
+        # if Name is empty
+        if new_config['Name'] == '':
+            return
+        
+        # Check if integers are valid
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         # Append new config to list
         self.meas_configs.append(new_config)
