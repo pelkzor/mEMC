@@ -1010,7 +1010,7 @@ class measure_session():
 
     ''' Callback Functions '''
 
-    '''----CONFIG WINDOW CALLBACKS START----'''
+    '''----CONFIG ADD WINDOW CALLBACKS START----'''
     '''
     Function Description: Callback function. Defines a new window called when the new configuration button
     is pressed. Allows user to fill a new configuration which is saved.
@@ -1108,7 +1108,7 @@ class measure_session():
         # Terminate the window
         window.destroy()
 
-    '''----CONFIG WINDOW CALLBACKS END ----'''
+    '''----CONFIG ADD WINDOW CALLBACKS END ----'''
 
     '''----NEW MEASUREMENT WINDOW CALLBACKS START----'''
     '''
@@ -1184,7 +1184,6 @@ class measure_session():
     '''----NEW MEASUREMENT WINDOW CALLBACKS END----'''
 
     '''----NEW SESSION WINDOW CALLBACKS START----'''
-
     '''
     Function Description: Callback Function. Used to save a description of the new session.
 
@@ -1278,7 +1277,14 @@ Returns: NA
 '''
 class plot_session():
 
-    # Generates new window
+    '''Window Generation Functions'''
+    '''
+    Function Description: Initialises plotting GUI window
+
+    Parameters: window - Tkinter window object
+
+    Returns: NA
+    '''
     def __init__(self, window):
         # Init class variables
         self.window = window            # Parent window
@@ -1353,11 +1359,14 @@ class plot_session():
         # Print json files in current directory/sub-directories to sessions tree
         for file in self.json_files:
             self.tree_json.insert('',END, values= file.get("filename"))
-
-        #self.window.mainloop()
     
     '''
-    Function Description: return new directory selected by user
+    Function Description: Fills directory textbox with latest
+    filepath selected by the user. Updates .json session tree
+
+    Parameters: NA
+
+    Returns: NA
     '''
     def update_directory(self):
         self.curr_directory = filedialog.askdirectory()
@@ -1378,184 +1387,13 @@ class plot_session():
         # Print to json tree
         for file in self.json_files:
             self.tree_json.insert('',END, values=file.get("filename"))
-    
+       
     '''
-    Function Description: Called when the user selects a json file. Writes 
-                description and measurements list to widgets
-    '''
-    def json_selected(self, event):
-        # Get list of items selected
-        selected_items = self.tree_json.selection()
-        # Check if no item selected
-        if not selected_items:
-            return
-        
-        # Highlight selection
-        for item in selected_items:
-            self.tree_json.item(item, tags=("highlight",))
-        
-        # Store first selected item name
-        selected_item = self.tree_json.item(selected_items[0])["values"][0]
+    Function Description: Generate required frames for plotting GUI window
 
-        # Load json data
-        for file in self.json_files:
-            if file.get("filename") == selected_item:
-                self.json_file_selected = file  # Save the filename and filepath dictionary
-                self.selected_json_data = emc.load_sessiondata(selected_item)   # Load data in json file
-        
-        # Update metadata field with file name, desription etc
-        self.entry_metadata.config(state='normal')
-        self.entry_metadata.delete("1.0",END)
-        self.entry_metadata.insert(END, f'File Name: \t\t{self.selected_json_data["File Name"]}\n')
-        self.entry_metadata.insert(END, f'Date Created: \t\t{self.selected_json_data["Date Created"]}\n')
-        self.entry_metadata.insert(END, f'Description: \t\t{self.selected_json_data["Description"]}\n')
-        self.entry_metadata.config(state='disabled')
+    Parameters: NA
 
-        # Update measurements tree with measurement from selected json
-        # Clear json tree
-        for item in self.tree_measurement.get_children():
-            self.tree_measurement.delete(item) 
-        # Iterate through the json file for each measure keyword until none are left
-        for i in range(MAX_POSSIBLE_MEASUREMENTS):
-            measure_key = f"measure{i}"
-            '''
-            # Search for measurement key in json file
-            measurement = self.selected_json_data.get(measure_key, "Nonexistent")
-            # Return nonexisent keyword if not found
-            if(measurement == "Nonexistent"):
-                # Assume all keys found and listed. Exit
-                break
-            # List on measurement tree
-            self.tree_measurement.insert('',END, values=measure_key)
-            '''
-            for key in self.selected_json_data:
-                if measure_key in key:
-                    self.tree_measurement.insert('', END, values=key)
-                    
-
-    '''
-    Function Description: Called when a measurement is selected in the
-        measurement tree. Highlights selected item. Loads the measurement object
-        with all measurement data. Appends to list of selected measurements.
-        Appends the json file name and path associated with this measurement
-        to measurement dictionary to be used for labelling in plots
-    '''
-    def measurement_selected(self, event):
-        
-        # Clear previous selection
-        self.selected_measurement = []
-        
-        # Get list of items selected
-        selected_items = self.tree_measurement.selection()
-        # Check if no item selected
-        if not selected_items:
-            return
-        
-        for item in selected_items:
-            # Highlight selection
-            self.tree_measurement.item(item, tags=("highlight",))
-            # Convert item ID to item name
-            item_name = self.tree_measurement.item(item)["values"][0]
-            # Temporarily save measurement data
-            self.selected_measurement.append(self.selected_json_data[item_name])
-            # Append name of the measurement
-            self.selected_measurement[-1]["Name"] = item_name
-            # Append treeview id of the measurement
-            self.selected_measurement[-1]["id"] = item
-            # Append name of json file
-            self.selected_measurement[-1]['JSON_Name'] = self.json_file_selected["filename"].replace(".json",'')
-
-        # Update Metadata box with data from last selected measurement
-        self.entry_metadata.config(state='normal')
-        self.entry_metadata.delete("1.0",END)
-        self.entry_metadata.insert(END, f'Time Stamp: \t\t{self.selected_measurement[-1]["TimeStamp"]}\n')
-        self.entry_metadata.insert(END, f'Configuration: \t\t{self.selected_measurement[-1]["Configuration"]}\n')
-        self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement[-1]["Note"]}\n')
-        self.entry_metadata.config(state='disabled')
-        
-    
-    def selection_selected(self, event):
-
-        # Clear previous selection
-        self.selected_selection_tree = []
-        
-        # Get list of items selected
-        selected_items = self.tree_selection.selection()
-        # Check if no item selected
-        if not selected_items:
-            return
-        
-        # Iterate through selected items in selection tree
-        # and append to lsit of selected items in selection tree
-        for item in selected_items:
-            # Highlight selection
-            self.tree_selection.item(item, tags=("highlight",))
-            # Convert item ID to item name
-            item_name = self.tree_selection.item(item)["values"][0]
-            # Removed Json file name attached to measurement name
-            item_name = item_name.replace(f"{self.json_file_selected["filename"].replace(".json","")}/", "")
-            # Temporarily save measurement data
-            self.selected_selection_tree.append(self.selected_json_data[item_name])
-            # Append name of the measurement
-            self.selected_selection_tree[-1]["Name"] = item_name
-            # Append treeview id of the measurement
-            self.selected_selection_tree[-1]["id"] = item
-
-    '''
-    Function Description: Called when the right button is pressed. Moves selected items from measurement tree
-            to selection tree. Appends associated measurement objects to list to be plotted
-    '''    
-    def rb_pressed(self):
-        
-        # Get list of measurements already in selection tree
-        item_names = []
-        for item in self.tree_selection.get_children():
-            item_names.append(self.tree_selection.item(item)["values"][0])
-            
-        # iterate through measurements selected in measurement tree
-        for meas in self.selected_measurement:
-            meas_name = f'{meas["JSON_Name"]}/{meas["Name"]}'
-            if meas_name not in item_names:
-                self.tree_selection.insert("", END, values=meas_name)
-                # Add measurement data to plotting dictionary
-                self.to_plot.append(meas)
-        
-    '''
-    Function Description: Called when the left button is pressed. Removes selected items from selection tree. 
-                Removes associated measurement objects from list to be plotted 
-    '''
-    def lb_pressed(self):
-
-        # iterate through measurements selected in selection tree
-        for meas in self.selected_selection_tree:
-            # Delete from selection tree
-            self.tree_selection.delete(meas["id"])
-            # Remove measurement data from plotting dictionary
-            self.to_plot.remove(meas)
-
-    '''
-    Function Description: Called when plot button is pressed. Plots list of measurement objects in selection
-            tree
-    '''
-    def pltb_pressed(self):
-        # plot plotting dictionary
-        emc.plotall(self.to_plot)
-
-    '''
-    Function Description: Called when clear button is pressed. Clears list of items from selection tree and 
-            clear list of measurement objects to be plotted
-    '''
-    def clrb_pressed(self):
-
-        # Clear selection tree
-        for item in self.tree_selection.get_children():
-            self.tree_selection.delete(item) 
-        
-        # Clear list of measurement to plot
-        self.to_plot = []
-
-    '''
-    Function Description: Generate required frames for GUI
+    Results: NA
     '''
     def create_frames(self):
         
@@ -1613,9 +1451,12 @@ class plot_session():
         # Ensure the frame expands across all columns
         frame_buf.grid(columnspan=4)
 
-
     '''
     Function Description: Defines widgets for each frame
+
+    Parameters: NA
+
+    Results: NA
     '''
     def create_widgets(self):
 
@@ -1656,28 +1497,229 @@ class plot_session():
         self.tree_json = define_treeview(self.frame_json, pos_session_tree[0], pos_session_tree[1], sticky=NSEW)
         self.tree_json.config(columns=('Filename'))
         # Called when user selects a json file in the sessions tree
-        self.tree_json.bind('<<TreeviewSelect>>', self.json_selected)
+        self.tree_json.bind('<<TreeviewSelect>>', self.cb_json_selected)
 
         '''frame_measurement widgets'''
         define_label(self.frame_measurement, pos_measurement_label[0], pos_measurement_label[1], "Measurement", sticky=N)
         self.tree_measurement = define_treeview(self.frame_measurement, pos_measurement_tree[0], pos_measurement_tree[1], selectmode='extended', sticky=NSEW)
         self.tree_measurement.config(columns=('Measurement'))
         # Called when user selections measurements in the measurement tree
-        self.tree_measurement.bind('<<TreeviewSelect>>', self.measurement_selected)
+        self.tree_measurement.bind('<<TreeviewSelect>>', self.cb_measurement_selected)
 
         '''frame_buttons widgets'''
         define_label(self.frame_buttons, pos_empty_label[0], pos_empty_label[1], sticky=NSEW)
-        button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", function_call=self.rb_pressed, sticky=NSEW)
-        button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", function_call=self.lb_pressed, sticky=NSEW)
-        button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", function_call=self.pltb_pressed, sticky=NSEW)
-        button_clear =    define_button(self.frame_buttons, pos_clear_button[0], pos_clear_button[1], "Clear", function_call=self.clrb_pressed, sticky=NSEW)
+        button_moveright = define_button(self.frame_buttons, pos_moveright_button[0], pos_moveright_button[1], " > ", function_call=self.cb_rb_pressed, sticky=NSEW)
+        button_moveleft  = define_button(self.frame_buttons, pos_moveleft_button[0], pos_moveleft_button[1], " < ", function_call=self.cb_lb_pressed, sticky=NSEW)
+        button_plot =    define_button(self.frame_buttons, pos_plot_button[0], pos_plot_button[1], "Plot", function_call=self.cb_pltb_pressed, sticky=NSEW)
+        button_clear =    define_button(self.frame_buttons, pos_clear_button[0], pos_clear_button[1], "Clear", function_call=self.cb_clrb_pressed, sticky=NSEW)
 
         '''frame_selection widgets'''
         define_label(self.frame_selection, pos_selection_label[0], pos_selection_label[1], "Plot Selection", sticky=N)
         self.tree_selection = define_treeview(self.frame_selection, pos_selection_tree[0], pos_selection_tree[1], sticky=NSEW, selectmode='extended')
         self.tree_selection.config(columns=('Selection'))
-        # Call when the user selects measurements in the selection tree
-        self.tree_selection.bind('<<TreeviewSelect>>', self.selection_selected)
+        # Called when the user selects measurements in the selection tree
+        self.tree_selection.bind('<<TreeviewSelect>>', self.cb_selection_selected)
+
+    '''Callback Functions'''
+    '''
+    Function Description: Callback Function. Called when the user selects a json file in the json
+    session tree. Writes description to the metadata entry box and updates the measurements tree list widget.
+
+    Parameters: NA
+
+    Returns: NA
+    '''
+    def cb_json_selected(self, event):
+        # Get list of items selected
+        selected_items = self.tree_json.selection()
+        # Check if no item selected
+        if not selected_items:
+            return
+        
+        # Highlight selection
+        for item in selected_items:
+            self.tree_json.item(item, tags=("highlight",))
+        
+        # Store first selected item name
+        selected_item = self.tree_json.item(selected_items[0])["values"][0]
+
+        # Load json data
+        for file in self.json_files:
+            if file.get("filename") == selected_item:
+                self.json_file_selected = file  # Save the filename and filepath dictionary
+                self.selected_json_data = emc.load_sessiondata(selected_item)   # Load data in json file
+        
+        # Update metadata field with file name, desription etc
+        self.entry_metadata.config(state='normal')
+        self.entry_metadata.delete("1.0",END)
+        self.entry_metadata.insert(END, f'File Name: \t\t{self.selected_json_data["File Name"]}\n')
+        self.entry_metadata.insert(END, f'Date Created: \t\t{self.selected_json_data["Date Created"]}\n')
+        self.entry_metadata.insert(END, f'Description: \t\t{self.selected_json_data["Description"]}\n')
+        self.entry_metadata.config(state='disabled')
+
+        # Update measurements tree with measurement from selected json
+        # Clear json tree
+        for item in self.tree_measurement.get_children():
+            self.tree_measurement.delete(item) 
+        # Iterate through the json file for each measure keyword until none are left
+        for i in range(MAX_POSSIBLE_MEASUREMENTS):
+            measure_key = f"measure{i}"
+            # Find the measurement entry based on above key
+            for key in self.selected_json_data:
+                if measure_key in key:
+                    self.tree_measurement.insert('', END, values=key)
+                   
+    '''
+    Function Description: Callback Function. Called when a measurement is selected in the
+        measurement tree. Highlights selected item. Loads the measurement object
+        with all measurement data. Appends to list of selected measurements.
+        Appends the json file name and path associated with this measurement
+        to measurement dictionary to be used for labelling in plots
+
+    Parameters: NA
+
+    Returns: NA
+    '''
+    def cb_measurement_selected(self, event):
+        
+        # Clear previous selection
+        self.selected_measurement = []
+        
+        # Get list of items selected
+        selected_items = self.tree_measurement.selection()
+        # Check if no item selected
+        if not selected_items:
+            return
+        
+        for item in selected_items:
+            # Highlight selection
+            self.tree_measurement.item(item, tags=("highlight",))
+            # Convert item ID to item name
+            item_name = self.tree_measurement.item(item)["values"][0]
+            # Temporarily save measurement data
+            self.selected_measurement.append(self.selected_json_data[item_name])
+            # Append name of the measurement
+            self.selected_measurement[-1]["Name"] = item_name
+            # Append treeview id of the measurement
+            self.selected_measurement[-1]["id"] = item
+            # Append name of json file
+            self.selected_measurement[-1]['JSON_Name'] = self.json_file_selected["filename"].replace(".json",'')
+
+        # Update Metadata box with data from last selected measurement
+        self.entry_metadata.config(state='normal')
+        self.entry_metadata.delete("1.0",END)
+        self.entry_metadata.insert(END, f'Time Stamp: \t\t{self.selected_measurement[-1]["TimeStamp"]}\n')
+        self.entry_metadata.insert(END, f'Configuration: \t\t{self.selected_measurement[-1]["Configuration"]}\n')
+        self.entry_metadata.insert(END, f'Note: \t\t{self.selected_measurement[-1]["Note"]}\n')
+        self.entry_metadata.config(state='disabled')
+        
+    '''
+    Function Description: Callback Function. Called when the user selects items in 
+    the plot selection tree. Appends the selected items to a list tracking selected items
+
+    Parameters: NA
+
+    Returns: NA 
+    '''
+    def cb_selection_selected(self, event):
+
+        # Clear previous selection
+        self.selected_selection_tree = []
+        
+        # Get list of items selected
+        selected_items = self.tree_selection.selection()
+        # Check if no item selected
+        if not selected_items:
+            return
+        
+        # Iterate through selected items in selection tree
+        # and append to list of selected items in selection tree
+        for item in selected_items:
+            # Highlight selection
+            self.tree_selection.item(item, tags=("highlight",))
+            # Convert item ID to item name
+            item_name = self.tree_selection.item(item)["values"][0]
+            # Removed Json file name attached to measurement name
+            item_name = item_name.replace(f"{self.json_file_selected["filename"].replace(".json","")}/", "")
+            # Temporarily save measurement data
+            self.selected_selection_tree.append(self.selected_json_data[item_name])
+            # Append name of the measurement
+            self.selected_selection_tree[-1]["Name"] = item_name
+            # Append treeview id of the measurement
+            self.selected_selection_tree[-1]["id"] = item
+
+    '''
+    Function Description: Callback function. Called when the right button is pressed. 
+    Moves selected items from measurement tree to selection tree. Appends associated 
+    measurement objects to list to be plotted
+
+    Parameters: NA
+
+    Returns: NA
+    '''    
+    def cb_rb_pressed(self):
+        
+        # Get list of measurements already in selection tree
+        item_names = []
+        for item in self.tree_selection.get_children():
+            item_names.append(self.tree_selection.item(item)["values"][0])
+            
+        # iterate through measurements selected in measurement tree
+        for meas in self.selected_measurement:
+            meas_name = f'{meas["JSON_Name"]}/{meas["Name"]}'
+            # Only add items not already in the selection tree 
+            # To list to be plotted
+            if meas_name not in item_names:
+                self.tree_selection.insert("", END, values=meas_name)
+                # Add measurement data to plotting dictionary
+                self.to_plot.append(meas)
+        
+    '''
+    Function Description: Callback Function. Called when the left button is pressed. 
+    Removes selected items from selection tree. Removes associated measurement objects from list to be plotted 
+    
+    Parameters: NA
+
+    Returns: NA
+    '''
+    def cb_lb_pressed(self):
+
+        # iterate through measurements selected in selection tree
+        for meas in self.selected_selection_tree:
+            # Delete from selection tree
+            self.tree_selection.delete(meas["id"])
+            # Remove measurement data from plotting dictionary
+            self.to_plot.remove(meas)
+
+    '''
+    Function Description: Callback function. Called when plot button is pressed. 
+    Plots list of measurement objects in selection tree
+
+    Parameters: NA
+
+    Results: NA
+    '''
+    def cb_pltb_pressed(self):
+        # plot plotting dictionary
+        emc.plotall(self.to_plot)
+
+    '''
+    Function Description: Callback Function. Called when clear button is pressed. 
+    Clears list of items from selection tree and clears list of measurement objects to be plotted
+
+    Parameters: NA
+
+    Returns: NA
+    '''
+    def cb_clrb_pressed(self):
+
+        # Clear selection tree
+        for item in self.tree_selection.get_children():
+            self.tree_selection.delete(item) 
+        
+        # Clear list of measurement to plot
+        self.to_plot = []
+
 
 '''----CLASS DEFINITIONS END----'''
 
