@@ -16,10 +16,11 @@ Date: 03/06/2024
 
 '''
 Desc: Highest abstraction. Calls measurement class. Handles data storage along with notes by user
+
 Para: save file name, object of instrument being used
+
 return: NA
 '''
-
 class Session:
 
     def __init__ (self, dev, savefilepath = "", desc = ""):
@@ -52,11 +53,11 @@ class Session:
             # Append directory to file name
             self.savefilepath = f'{save_folder}/{savefilename}'
 
-        else:
-            self.savefilpath = f'{self.savefilepath}_{date}_{start_time}'
+        #else:
+            #self.savefilpath = f'{self.savefilepath}_{date}_{start_time}'
 
         self.parent_dict["Date Created"] = date
-        self.parent_dict["File Name"] = os.path.basename(self.savefilpath)
+        self.parent_dict["File Name"] = os.path.basename(self.savefilepath)
         self.parent_dict["Description"] = self.session_desc
 
 
@@ -115,7 +116,7 @@ class Session:
         # Note: Cant save specific measurement each time as the json dump cannot append to file,
         # instead it overwrites it. hence I append measurement to a dctionary containing all measurements
         # and then save
-        file = f'{self.savefilepath}.json'
+        file = f'{self.savefilepath}'
         with open(file, mode = "w") as f:
             json.dump(self.parent_dict, f, indent=4)
 
@@ -452,9 +453,10 @@ def list_json_files(directory = ''):
         # load data from json file
         file_dict = load_sessiondata(file)
         # Search for at least one valid measurement in each json file
-        if "measure0" in file_dict:
-            # Append to list of valid json files
-            json_files.append({"filename":os.path.basename(file), "filepath": file})
+        for key in file_dict.keys():
+            if key.startswith("measure0"):
+                # Append to list of valid json files
+                json_files.append({"filename":os.path.basename(file), "filepath": file})
 
     # Print the list of valid JSON files found
     if json_files != None:
