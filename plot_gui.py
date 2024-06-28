@@ -31,7 +31,6 @@ theme = {
         "light"     : "journal"
         }
 
-
 '''----TTKBOOTSTRAP WIDGET DEFINITION HELPER FUNCTIONS START----'''
 
 '''
@@ -1181,7 +1180,7 @@ class measure_session():
 
     ''' Callback Functions '''
 
-    '''----CONFIG ADD WINDOW CALLBACKS START----'''
+    '''----CONFIG ADD WINDOW CALLBACKS----'''
     '''
     Function Description: Callback function. Defines a new window called when the new configuration button
     is pressed. Allows user to fill a new configuration which is saved.
@@ -1269,8 +1268,47 @@ class measure_session():
         if new_config['Name'] == '':
             return
         
-        # Check if integers are valid
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # Check if inputs to entryboxes are valid
+        # Ensure inputs are ints
+        try:
+            int_value = int(new_config['fstart'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['fstop'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['rbw'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['vbw'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['atten'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['sweeppoints'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['sweepcount'])
+        except ValueError:
+            return
+        
+        try:
+            int_value = int(new_config['offset'])
+        except ValueError:
+            return
 
         # Append new config to list
         self.meas_configs.append(new_config)
@@ -1286,9 +1324,8 @@ class measure_session():
         # Terminate the window
         window.destroy()
 
-    '''----CONFIG ADD WINDOW CALLBACKS END ----'''
 
-    '''----NEW MEASUREMENT WINDOW CALLBACKS START----'''
+    '''----NEW MEASUREMENT WINDOW CALLBACKS----'''
     '''
     Function Description: Callback Function. Defines a new window called when 
     the save measurement button is pressed. Allows user to fill a measurement name and notes
@@ -1359,9 +1396,8 @@ class measure_session():
         # Destroy the save window
         window.destroy()
 
-    '''----NEW MEASUREMENT WINDOW CALLBACKS END----'''
 
-    '''----NEW SESSION WINDOW CALLBACKS START----'''
+    '''----NEW SESSION WINDOW CALLBACKS----'''
     '''
     Function Description: Callback Function. Used to save a description of the new session.
 
@@ -1429,9 +1465,7 @@ class measure_session():
         self.threshold_textbox.config(state='normal')
         self.influence_textbox.config(state='normal')
 
-    '''----NEW SESSION WINDOW CALLBACKS END----'''
-
-    '''----GENERAL CALLBACKS START----'''
+    '''----GENERAL CALLBACKS----'''
     
     '''
     Function description: Callback Function. Takes a new
@@ -1489,8 +1523,6 @@ class measure_session():
         # replot graph
         emc.plotSingleCanvas(self.meas, canvas=self.canvas, axis=self.ax, peaklist=self.peakslist)
         
-
-    '''----GENERAL CALLBACKS END----'''
 
 '''
 Desc: Creates a GUI for plotting previous session measurements saved as .json files
@@ -1954,5 +1986,7 @@ window.resizable(1,1)
 # Modify window for measure session 
 measure_session(window)
 #plot_session(window)
+# Install window close routine
+window.protocol("WM_DELETE_WINDOW",window.destroy)
 # Run mainloop
 window.mainloop()
