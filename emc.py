@@ -94,20 +94,19 @@ class Session:
         # Clear buffers
         data = []      
         datax = []
-        '''
+        
         # Read data
         data, datax = self.meas.measure()
         # Apply corrections
         data = applycorrection(data, datax, self.fclist)
-        '''
     
         ''''''
         # TESTING. Loads data from a previous json recording. Simulating reading
         # Data from actual instrument as above
-        diction = load_sessiondata("session_test.json")["measure0"]
-        data = diction["Sig_Level"]
-        datax = diction['Frequency']
-        data = applycorrection(data, datax, self.fclist)
+        #diction = load_sessiondata("session_test.json")["measure0"]
+        #data = diction["Sig_Level"]
+        #datax = diction['Frequency']
+        #data = applycorrection(data, datax, self.fclist)
         ''''''
 
         # Save data to dictionary
