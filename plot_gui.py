@@ -442,9 +442,6 @@ class measure_session():
 
         # Clear previous window configurations
         # Clear widgets
-        #for widget in window.winfo_children():
-            #widget.grid_forget()
-            #widget.destroy()
         list = self.window.grid_slaves()
         for l in list:
             l.grid_forget()
@@ -1543,9 +1540,6 @@ class plot_session():
         # Iterate over all widgets in the window
                 
         # Clear widgets
-        #for widget in window.winfo_children():
-            #widget.grid_forget()
-            #widget.destroy()
         list = self.window.grid_slaves()
         for l in list:
             l.grid_forget()
@@ -1928,11 +1922,11 @@ class plot_session():
         # Clear list of measurement to plot
         self.to_plot = []
 
-
 '''----CLASS DEFINITIONS END----'''
 
 # Generate GUI window
 window = ttk_b.Window(themename = theme["default"])
+# Make the window resizable
 window.resizable(1,1)
 # Modify window for measure session 
 measure_session(window)

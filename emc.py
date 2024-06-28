@@ -40,10 +40,6 @@ class Session:
         self.count = 0                  # Tracks number of measurements taken 
         self.measure_dict = {}          # Current measurement dictionary
 
-        # Parent dictionary. Contains filename, data of creation, description
-        # and list of measurements
-        self.parent_dict = {}
-
         # Append date and time to given folder and file name
         curr_time = datetime.now()
         start_time = curr_time.strftime("%H%M%S")
@@ -65,9 +61,16 @@ class Session:
         #else:
             #self.savefilpath = f'{self.savefilepath}_{date}_{start_time}'
 
-        self.parent_dict["Date Created"] = date
-        self.parent_dict["File Name"] = os.path.basename(self.savefilepath)
-        self.parent_dict["Description"] = self.session_desc
+        # Parent dictionary. Contains filename, data of creation, description
+        parent_dict = {}
+        parent_dict["Date Created"] = date
+        parent_dict["File Name"] = os.path.basename(self.savefilepath)
+        parent_dict["Description"] = self.session_desc
+
+        # Save the initial metadata in the parent dict above to file
+        file = f'{self.savefilepath}'
+        with open(file, mode = "w") as f:
+            json.dump(parent_dict, f, indent=4)
 
 
     '''
@@ -128,19 +131,24 @@ class Session:
         self.measure_dict["Name"] = meas_name
         self.measure_dict["Note"] = note
         
+        # Load previously saved measurements data from file
+        parent_dict = {}
+        with open(self.savefilepath, 'r') as file:
+            parent_dict = json.load(file)
+
         # Assign new measurement to parent dictionary
         if self.measure_dict['Name'] == '':
-            self.parent_dict["measure" + str(self.count)] = self.measure_dict
+            parent_dict["measure" + str(self.count)] = self.measure_dict
         else:
-            self.parent_dict["measure" + str(self.count) + '_' + self.measure_dict['Name']] = self.measure_dict
+            parent_dict["measure" + str(self.count) + '_' 
+                        + self.measure_dict['Name']] = self.measure_dict
 
         # Save updated parent dictionary to file
         # Note: Cant save specific measurement each time as the json dump cannot append to file,
-        # instead it overwrites it. hence I append measurement to a dctionary containing all measurements
+        # instead it overwrites it. hence I append measurement to a dictionary containing all measurements
         # and then save
-        file = f'{self.savefilepath}'
-        with open(file, mode = "w") as f:
-            json.dump(self.parent_dict, f, indent=4)
+        with open(self.savefilepath, mode = "w") as f:
+            json.dump(parent_dict, f, indent=4)
 
         # Update measurement counter
         self.count += 1
@@ -498,7 +506,6 @@ def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Fr
     canvas.draw()
 
     return axis
-
 
 '''
 Function Definition:    Plots a list of measurements to the same plot
