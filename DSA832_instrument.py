@@ -2,9 +2,8 @@ import socket
 import json
 import time
 
-
-# FOR DEBUGGING ONLY
-import pdb;
+# FOR DEBUGGING ONLY (Allows for breakpoints in the debugger)
+#import pdb;
 
 from instrument_abstract import Instrument
 

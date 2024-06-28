@@ -6,7 +6,6 @@ import json
 import os
 import glob
 
-
 from DSA832_instrument import DSA832
 
 '''
@@ -14,15 +13,25 @@ Author: Shawn Nagar
 Date: 03/06/2024
 '''
 
+'''----CLASS DEFINITIONS START----'''
+
 '''
-Desc: Highest abstraction. Calls measurement class. Handles data storage along with notes by user
-
-Para: save file name, object of instrument being used
-
+Desc:   Highest abstraction. Calls measurement class. Handles data storage along with notes by use
+Para:   save file name, object of instrument being used
 return: NA
 '''
 class Session:
 
+    '''
+    Function Description: Initialises the Neasurement Object.
+            Accepts the savefile path provided, else creates its 
+            own. Initialises part of the parent dictionary that
+            stores all measurements in this session
+    Parameters: dev - device object (See instrument_abstract.py)
+                savefilepath - file path for save file
+                desc - Description of current session
+    Returns:    None
+    '''
     def __init__ (self, dev, savefilepath = "", desc = ""):
         self.savefilepath = savefilepath
         self.session_desc = desc        # description of session to be added to file
@@ -61,7 +70,12 @@ class Session:
         self.parent_dict["Description"] = self.session_desc
 
 
-    # Iterate 1 measurement
+    '''
+    Function Description: Fills the measurement struct with data from
+            a single recording.
+    Parameters: None
+    Returns:    None 
+    '''
     def measure(self):
 
         # Clear current measure dictionary
@@ -84,23 +98,31 @@ class Session:
         data = applycorrection(data, datax, self.fclist)
         '''
     
+        ''''''
         # TESTING. Loads data from a previous json recording. Simulating reading
         # Data from actual instrument as above
         diction = load_sessiondata("session_test.json")["measure0"]
         data = diction["Sig_Level"]
         datax = diction['Frequency']
         data = applycorrection(data, datax, self.fclist)
-        
+        ''''''
+
         # Save data to dictionary
         self.measure_dict["Sig_Level"] = data
         self.measure_dict["Frequency"] = datax
 
         # Generate plot
-        #plot(measure_dict)
         return self.measure_dict
 
 
-    # save dictionary to file
+    '''
+    Function Description: Appends the current measurement dictionary
+            to the parent dictionary. Saves all measurements from this
+            session so far to .json savefile
+    Parameters: meas_name - Name to be assigned to this measurement
+                note - Description for this measurement
+    Returns:    None
+    '''
     def savemeasure(self, meas_name = '', note = ''):
 
         self.measure_dict["Name"] = meas_name
@@ -134,8 +156,12 @@ class Config:
     def __init__(self):
         pass
 
+    ''' 
+    Function Description: Returns correct configuration based on number provided
+    Parameters: opt - index for specific configuration
+    Returns: configuration dictionary
+    '''
     @classmethod
-    # return correct configuration based on number provided
     def get_config(cls, opt: int):
         # Dictionary associating options provided with configuration methods
         configs = {0: Config.cfg_default,
@@ -217,13 +243,14 @@ class Config:
 
 ''' 
 Desc:   Class works independent of device being used. Methods request data from instrument. 
-        Data storage, manipulation and graphing implemented here.
-Para:   Instrument Object
-Return: NA
 '''
 class Measurement:
 
-    # Initialise instrument object here
+    '''
+    Function Description: Initialises measurement class
+    Para:   dev - Instrument Object
+    Return: NA
+    '''
     def __init__(self, dev):
         self.data = []      # Stores raw measured data (Y-axis)
         self.datax = []     # Stores raw measured data (X-axis)
@@ -232,9 +259,14 @@ class Measurement:
         # Assign default configuration
         self.cfg = Config.cfg_default() #Tracks configuration used for current measurement
     
-    # Create list of spectrum windows to be read
-    # Note: Resolution is poort if we read the entire spectrum at once. 
-    # Solution: Break the entire spectrum into smaller windows
+    '''
+    Function Description: Creates a list of spectrum windows
+            to be read
+    Parameters: None
+    Returns:    None
+    Note:   Resolution is poor if we read the entire spectrum once
+            Solution: Break the entire spectrum into smaller windows
+    '''
     def create(self):
         
         span = self.cfg['fstop']-self.cfg['fstart']
@@ -253,12 +285,21 @@ class Measurement:
             fs = fs + subspan                
             fe = fe + subspan
 
-    # generate a list of X-axis values based on readings + configuration
+    '''
+    Function Description: Generates a list of X-axis values based on readings + configuration
+    Parameters: None
+    Returns:    None
+    '''
     def setdatafreq(self):
         step = (self.cfg['fstop'] - self.cfg['fstart']) / len(self.data)
         self.datax = [ self.cfg['fstart'] + step//2 + n * step for n in range(len(self.data))]
 
-    # Measure all spectrum windows and return data
+    '''
+    Function Description:   Measure all specturm windows and return data 
+    Parameters: None
+    Returns:    data -  List of Voltage data points
+                datax - List of Frequency of data points
+    '''
     def measure(self):
         # Clear data buffer
         self.data = []
@@ -305,12 +346,23 @@ class Measurement:
 
         return self.data, self.datax
 
-    # Update configuration of the measure class
+    '''
+    Function Description: Update configuration of the measure class with default 
+            configurations found in the config class
+    Parameters: opt - index of list o
+    Returns:    None
+    '''
     def update_config(self, opt: int):
         self.cfg = Config.get_config(opt)
 
+'''----CLASS DEFINITIONS END----'''
 
-# Loads readings from previous session. To be used for plotting / data manipulation
+'''
+Function Description:   Loads readings from previous session. To be used 
+        for plotting / data manipulation
+Parameters: fname - file name of .json file of previous session data
+Returns:    dict - Dictionary of previous session .json file data
+'''
 def load_sessiondata(fname):
     # Read the JSON file and load its contents into a dictionary
     with open(fname, 'r') as file:
@@ -318,21 +370,36 @@ def load_sessiondata(fname):
     
     return dict
 
-# Load correction data from csv
+'''
+Function Description: Loads corrections data from csv
+Parameters: fname - file of correction .csv file
+Returns:    fclist - list of corrections data
+'''
 def loadcorrection(fname):
     with open(fname, 'r') as f:
         # frequency/correction list
         fclist = [tuple(x.split(',')) for x in f.read().split('\n')]         
         return fclist
 
-# Adjusts read data according to corrections
+'''
+Function Description:   Applies corrections to read data
+Parameters: data - voltage readings
+            datax - frequency datapoints of readings
+Returns:    data0 - list of voltage readings with applied corrections
+'''
 def applycorrection(data, datax, fclist):
     data0 = []
     for i in range(len(data)):
         data0.append(data[i] + getfc(datax[i], fclist))
     return data0
 
-# Define correction for specific freq
+'''
+Function Description: Returns corrections for data points
+        at specific frequencies
+Parameters: freq - Frequency data points
+            fclist - List of corrections
+Returns:    Corrected values
+'''
 def getfc(freq, fclist):
     f1 = int(fclist[0][0])
     c1 = float(fclist[0][1])
@@ -349,7 +416,15 @@ def getfc(freq, fclist):
             
     return 0  
 
-# Get peak of read data
+'''
+Function Description:   Get peak points of data
+Parameters: lag -       ???
+            threshold - ???
+            influence - ???
+            data -      Voltage datapoints
+            datax -     Frequencies of datapoints
+Returns:    list of lists of voltage readings and associated frequencies
+'''
 def getpeaks(lag, threshold, influence, data, datax):
     signals = np.zeros(len(data))
     filteredY = np.array(data)
@@ -380,20 +455,33 @@ def getpeaks(lag, threshold, influence, data, datax):
     pv = [data[i] for i in range(len(d['signals'])) if d['signals'][i] > 0]
     return [pf,pv]
 
+'''
+Function Description:   Plot a single graph on the canvas in the tkinter frame
+Parameters: meas - Measurement dictionary to be plotted
+            canvas - tkinter canvas object to plot graph on
+            ref - ???
+            peaklist - List of peak datapoints to be marked on graph
+            xlabel - x-axis label
+            ylabel - y-axis label
+            legend - Legend for plot
+            title - Title of plot
+Returns:    axis - subplot axis object
+'''
 def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Frequency", 
-            ylabel = "dBuV", label = None, title = None): 
+            ylabel = "dBuV", legend = None, title = None): 
         
     # Clear previous plots
     plt.cla()
     plt.close()
 
+    # Apply corrections to voltage readings
     fclist = loadcorrection('tbaf1m.csv')
     datax = meas["Frequency"]
     data = applycorrection(meas["Sig_Level"], datax, fclist)
 
     # Clear the canvas before drawing the plot
     axis.clear()
-    axis.plot(datax, data, linewidth = 0.5, label = label)
+    axis.plot(datax, data, linewidth = 0.5, label = legend)
 
     if ref:
         axis.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
@@ -406,12 +494,23 @@ def plotSingleCanvas(meas, canvas, axis, ref=None, peaklist = None, xlabel = "Fr
     axis.set_ylabel(ylabel)
     axis.grid(True)
 
+    # Plot graph to canvas
     canvas.draw()
 
     return axis
 
 
-# Plot waveform         # fig = plt
+'''
+Function Definition:    Plots a list of measurements to the same plot
+Parameters: measurements - list of measurements to be plotted
+            ref - ???
+            peaklist - List of peak datapoints to be marked on graph
+            xlabel - x-axis label
+            ylabel - y-axis label
+            legend - Legend for plot
+            title - Title of plot
+Returns:    None
+'''
 def plotall(measurements, ref=None, peaklist = None, xlabel = "frequency", 
             ylabel = "dBuV", title = "Measurement Plot", label = ""): 
     
@@ -441,10 +540,16 @@ def plotall(measurements, ref=None, peaklist = None, xlabel = "frequency",
     ax.legend()
     ax.grid()
 
+    # Generate plot
     plt.show()
     plt.close(fig)
 
-
+'''
+Function Descrption:
+Parameters: directory - directory path to folder / sub-folders 
+                        to find session .json files in
+Returns:    list of session json files
+'''
 def list_json_files(directory = ''):
 
     json_files = []              # list of valid json dictionaries
@@ -466,29 +571,4 @@ def list_json_files(directory = ''):
                 # Append to list of valid json files
                 json_files.append({"filename":os.path.basename(file), "filepath": file})
 
-    # Print the list of valid JSON files found
-    if json_files != None:
-        #print("Found JSON files:")
-        #count = 0
-        #for valid_json_file in json_files:
-        #    print(f'{count}. {valid_json_file.get("filename")}')
-        #    count += 1
-        return json_files
-
-    else:
-        #print("No JSON files found in the folder.")
-        return
-
-
-# API's
-#def meas_instr():
-    #dev = DSA832()      # Create device object
-    #Session(dev, input("Savefile Name: "), input("Test Description:")).begin()
-
-#def meas_plot():
-#    files = list_json_files()
-#    selection = int(input("Select file to plot: "))
-#    plotall_measured(meas[selection])
-
-#meas_plot()
-#meas_instr()
+    return json_files

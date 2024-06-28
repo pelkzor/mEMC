@@ -32,7 +32,6 @@ theme = {
         }
 
 '''----TTKBOOTSTRAP WIDGET DEFINITION HELPER FUNCTIONS START----'''
-
 '''
 Function Description: Define a frame for the UI objects
 
@@ -300,7 +299,6 @@ def define_plot(container, position_y = 0, position_x = 0, sticky = None, xlabel
         toolbar.update()
         toolbar.grid(row=position_x+1, column=position_y, sticky=sticky)
     return (canvas, ax)
-
 '''----TTKBOOTSTRAP WIDGET DEFINITION HELPER FUNCTIONS END----'''
 
 
@@ -373,7 +371,6 @@ def load_theme():
         save_theme(saved_theme)
 
     return saved_theme
-
 '''----THEME FUNCTIONS END----'''
 
 '''----GENERAL FUNCTION START----'''
@@ -388,22 +385,17 @@ def switch_mode_measure(window):
 '''----GENERAL FUNCTION END----'''
 
 '''----CLASS DEFINITIONS START----'''
-
 '''
 Desc: Creates a GUI for reading measurements from the device defined above
-
 Parameters: NA
-
-Returns: NA
+Returns:    NA
 '''
 class measure_session():
     '''
-    Function Description: Initialises the Measurement GUI window.
-    Loads measurement configurations from the .json file
-
-    Para: window - Tkinter defined window object
-    
-    Returns: NA
+    Function Description:   Initialises the Measurement GUI window.
+            Loads measurement configurations from the .json file
+    Para:   window - Tkinter defined window object
+    Returns:NA
     '''
     def __init__(self, window):
         # Init class variables
@@ -421,8 +413,8 @@ class measure_session():
         self.filepath = None                # Savefile Path
         self.new_measurement_button = None      # New measurement button
         self.save_measurement_button = None     # Save measurement button
-        self.ax = None          # Handles plot
-        self.canvas = None      # Handles canvas where plot is placed
+        self.ax = None                  # Handles plot
+        self.canvas = None              # Handles canvas where plot is placed
         self.lags_textbox = None        # Lags textbox tkinter object
         self.threshold_textbox = None   # threshold textbox tkinter object
         self.influence_textbox = None   # Influence textbox tkinter object
@@ -459,8 +451,17 @@ class measure_session():
             l.destroy()
 
         # Ensure display frame expands with window as required
-        self.window.columnconfigure(2, weight=1)
-        self.window.rowconfigure(1, weight=1)
+        self.window.columnconfigure(0, weight=1)
+        self.window.rowconfigure(0, weight=1)
+
+        # Create a parent frame
+        # Note: Theme changes dont seem to work properly on the parent window,
+        # So I am adding a frame over the parent window
+        self.parent_frame = define_frame(self.window, 0, 0, NSEW)
+
+        # Ensure display frame expands with window as required
+        self.parent_frame.columnconfigure(2, weight=1)
+        self.parent_frame.rowconfigure(1, weight=1)
 
         # Create a menu Bar
         create_menubar(self.window)
@@ -471,17 +472,15 @@ class measure_session():
 
     ''' Parent Window Generation Functions '''
     '''
-    Function Description: Creates a frame to show the path of the current
-    session savefile
-
-    Parameter: position - Y,X position of frame in parent grid
-
-    return: NA
+    Function Description:   Creates a frame to show the path of the current
+            session savefile
+    Parameter:  position - Y,X position of frame in parent grid
+    return:     NA
     '''
     def create_frame_directory(self, position):
 
         # Define parent directory frame at the top
-        frame_directory = define_frame(self.window, position[0], position[1], NSEW)
+        frame_directory = define_frame(self.parent_frame, position[0], position[1], NSEW)
         # Ensure the box expands with the frame in the x axis
         frame_directory.columnconfigure(0, weight=1)
         # Add padding
@@ -505,17 +504,15 @@ class measure_session():
     
     '''
     Function Description: Creates the configuration frame. Has a dropdown for
-    possible configurations, a button to add new and textboxes to display
-    current configuration
-
-    Parameter: position - Y,X position of frame in parent grid
-
-    return: NA
+            possible configurations, a button to add new and textboxes to display
+            current configuration
+    Parameter:  position - Y,X position of frame in parent grid
+    return:     NA
     '''
     def create_frame_config(self, position):
 
         # Define config directory frame
-        frame_config = define_frame(self.window, position[0], position[1], NW)
+        frame_config = define_frame(self.parent_frame, position[0], position[1], NW)
         # Ensure the box expands with the frame in the x axis
         frame_config.columnconfigure(1, weight=1)
         # Add a boundary
@@ -549,13 +546,16 @@ class measure_session():
         self.update_para_entry_widgets(config_para_widgets)
        
     '''
-    Function Description: Creates the button frame. It has the save and new measurement
-    buttons along with a nested frame with settings to identify peaks
+    Function Description:   Creates the button frame. It has the save and new measurement
+            buttons along with a nested frame with settings to identify peaks
+
+    Parameters: position - list of Y,X coordinates
+    Returns:    NA
     '''
     def create_frame_buttons(self, position):
 
         # Define button configuration frame
-        frame_buttons = define_frame(self.window, position[0], position[1], N)
+        frame_buttons = define_frame(self.parent_frame, position[0], position[1], N)
         # Add additional padding
         frame_buttons.config(padding=5)
         # Ensure the box expands with the frame in the x axis
@@ -581,14 +581,11 @@ class measure_session():
         self.create_frame_peaks_config(frame_buttons, pos_peaks_config_frame)
         
     '''
-    Function Description: Creates a frame with textboxes for settings used to
-    identfy peaks in the graph
-    
-    Note: frame exists inside button frame
-    
-    Parameter: position - Y,X position of frame in parent grid
-    container - Tkinter defined parent window/Frame
-    
+    Function Description:   Creates a frame with textboxes for settings used to
+            identfy peaks in the graph
+    Note:   frame exists inside button frame
+    Parameter:  position - Y,X position of frame in parent grid
+                container - Tkinter defined parent window/Frame
     return: NA
     '''
     def create_frame_peaks_config(self, container, position):
@@ -643,16 +640,14 @@ class measure_session():
         self.influence_textbox.config(textvariable=self.influence_var)   
     
     '''
-    Function Description: Creates a frame to host the matplotlib interactive graph
-    
-    Parameter: position - Y,X position of frame in parent grid
-
-    return: NA
+    Function Description:   Creates a frame to host the matplotlib interactive graph
+    Parameter:  position - Y,X position of frame in parent grid
+    return:     NA
     '''
     def create_frame_graph(self, position):
 
         # Define graph frame
-        frame_graph = define_frame(self.window, position[0], position[1], NSEW)
+        frame_graph = define_frame(self.parent_frame, position[0], position[1], NSEW)
         # Ensure the box expands with the frame
         frame_graph.columnconfigure(0, weight=1)
         frame_graph.rowconfigure(0, weight=1)
@@ -663,29 +658,25 @@ class measure_session():
         self.canvas, self.ax = define_plot(frame_graph, sticky=NSEW, toolbar=True)
         
     '''
-    Function Description: Creates a frame to act as a buffer for padding against the bottom of
-    the window
-    
-    Parameter: position - Y,X position of frame in parent grid
-
-    return: NA
+    Function Description:   Creates a frame to act as a buffer 
+            for padding against the bottom of the window
+    Parameter:  position - Y,X position of frame in parent grid
+    return:     NA
     '''
     def create_frame_buf(self, position):
 
         # Define lower buffer frame at bottom
-        frame_buf = define_frame(self.window, position[0], position[1], NSEW)
+        frame_buf = define_frame(self.parent_frame, position[0], position[1], NSEW)
         # Define height
         frame_buf.config(height=50)
         # Ensure the frame expands across all columns
         frame_buf.grid(columnspan=3)
 
     '''
-    Function Description: Generate required frames for GUI.
-    This is the parent frame of this window
-    
-    Parameter: NA
-
-    return: NA
+    Function Description:   Generate required frames for GUI.
+            This is the parent frame of this window
+    Parameter:  NA
+    return:     NA
     '''
     def create_parent_frames(self):
         
@@ -708,14 +699,11 @@ class measure_session():
         self.create_frame_buf(pos_buf_frame)
 
     '''Configurations Functions'''
-
     '''
-    Function Description: Creates the labels used in both the main window
-    config frame and the add config window
-
+    Function Description:   Creates the labels used in both the main window
+            config frame and the add config window
     Parameters: frame_config - parent frame
-
-    Returns: NA
+    Returns:    NA
     '''
     def create_config_para_label_widgets(self, frame_config):
         
@@ -778,15 +766,12 @@ class measure_session():
         config_xscale_label = define_label(frame_config, pos_config_xscale_label[0], 
                                            pos_config_xscale_label[1], text="xscale", sticky=NSEW)
         
-
     '''
-    Function Description: Creates all the widgets associated with
-    the add configuration window parameters
-
+    Function Description:   Creates all the widgets associated with
+            the add configuration window parameters
     Parameters: frame_config - Configuration frame of parent window
-
-    Returns: config_dictionary - dictionary of individual configuration parameter 
-            entry/dropdown boxes as tkinter objects 
+    Returns:    config_dictionary - dictionary of individual 
+                configuration parameter entry/dropdown boxes as tkinter objects 
     '''
     def create_config_para_dropdown_widgets(self, frame_config):
         
@@ -922,13 +907,13 @@ class measure_session():
         return config_dict
 
     '''
-    Function Description: Creates all the widgets associated with
-    configuration parameters in main window
-
+    Function Description:   Creates all the widgets associated with
+            configuration parameters in main window
     Parameters: frame_config - Configuration frame of parent window
-    state - Determines whether widgets created are disabled upon creation or left active
-
-    Returns: config_dictionary - dictionary of individual configuration parameter entry boxes tkinter objects 
+                state - Determines whether widgets created are disabled 
+                        upon creation or left active
+    Returns:    config_dictionary - dictionary of individual configuration 
+                                    parameter entry boxes tkinter objects 
     '''
     def create_config_para_entry_widgets(self, frame_config, state = 'disabled'):
 
@@ -1013,13 +998,11 @@ class measure_session():
         return config_dict
 
     '''
-    Function Description: Loads the configuration json file with
-    all configurations for measurements. If it does not exist,
-    creates it with default configurations
-
+    Function Description:   Loads the configuration json file with
+            all configurations for measurements. If it does not exist,
+            creates it with default configurations
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def load_meas_configfile(self):
         
@@ -1037,12 +1020,9 @@ class measure_session():
                 self.meas_configs.append(emc.Config.get_config(i))
         
     '''
-    Function Description: Saves all configurations 
-    to config json file
-
+    Function Description:   Saves all configurations to config json file
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def save_configs(self):
         
@@ -1055,12 +1035,10 @@ class measure_session():
             json.dump(data, json_file, indent=4)
 
     '''
-    Function Description: Return all configuration
-    names from the configuration json file
-
+    Function Description:   Return all configuration
+            names from the configuration json file
     Parameters: NA 
-
-    Returns: meas_config_names - List of names of configurations in .json file
+    Returns:    meas_config_names - List of names of configurations in .json file
     '''
     def get_available_config_names(self):
         
@@ -1077,14 +1055,12 @@ class measure_session():
 
     '''
     Function Description: Used to update the configuration
-    widgets of the configuration parameters used in both
-    the config add window and config frame of the main window
-
+            widgets of the configuration parameters used in both
+            the config add window and config frame of the main window
     Parameters: widgets - Dictionary of config parameters widgets (Tkinter objects)
-    readonly - After writing to textboxes, determines if the widgets should be
-                left in readonly mode or normal mode
-
-    Returns: NA
+                readonly - After writing to textboxes, determines if the widgets should be
+                            left in readonly mode or normal mode
+    Returns:    NA
     '''
     def update_para_entry_widgets(self, widgets, readonly = TRUE):
         
@@ -1133,12 +1109,10 @@ class measure_session():
             widgets["xscale"].insert(END, curr_config['xscale'])
 
     '''
-    Function Description: Creates a new window to save the 
-    description of the new session being started
-
+    Function Description:   Creates a new window to save the 
+            description of the new session being started
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def create_new_session_desc_window(self):
         # Create new window over the main window
@@ -1179,15 +1153,13 @@ class measure_session():
         self.window.wait_window(window)
 
     ''' Callback Functions '''
-
     '''----CONFIG ADD WINDOW CALLBACKS----'''
     '''
-    Function Description: Callback function. Defines a new window called when the new configuration button
-    is pressed. Allows user to fill a new configuration which is saved.
-
+    Function Description: Callback function. Defines a new 
+            window called when the new configuration button
+            is pressed. Allows user to fill a new configuration which is saved.
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def cb_create_add_config_window(self):
         # Create new window over the main window
@@ -1233,13 +1205,12 @@ class measure_session():
         cancel_button = define_button(save_frame, 1, 0, "Cancel", function_call=window.destroy)
 
     '''
-    Function Description: Callback function. Saves new configuration
-    written into the entry boxes by the user as an entry in the configuraton
-    .json file. Updates list of configuration drop down menu
-
-    # Parameters: window - Parent container
-    widgets - Dictionary of widget tkinter objects in the configuration frame
-
+    Function Description:   Callback function. Saves new configuration
+            written into the entry boxes by the user as an entry in the configuraton
+            .json file. Updates list of configuration drop down menu
+    Parameters: window - Parent container
+                widgets - Dictionary of widget tkinter 
+                            objects in the configuration frame
     Returns: NA
     '''
     def cb_config_save_button_pressed(self, window, widgets):
@@ -1324,15 +1295,12 @@ class measure_session():
         # Terminate the window
         window.destroy()
 
-
     '''----NEW MEASUREMENT WINDOW CALLBACKS----'''
     '''
-    Function Description: Callback Function. Defines a new window called when 
-    the save measurement button is pressed. Allows user to fill a measurement name and notes
-
-    Parametes: NA
-
-    Returns: NA
+    Function Description:   Callback Function. Defines a new window called when 
+            the save measurement button is pressed. Allows user to fill a measurement name and notes
+    Parametes:  NA
+    Returns:    NA
     '''
     def cb_create_save_measurement_window(self):
         # Create new window over the main window
@@ -1380,12 +1348,10 @@ class measure_session():
 
     '''
     Function Description: Callback function. Saves the latest measurement to the .json file
-
     Parameters: window - parent tkinter container
-    meas_name - Name assigned to the measurement by the user
-    meas_desc - Description assigned to the measurement by the user
-
-    Returns: NA
+                meas_name - Name assigned to the measurement by the user
+                meas_desc - Description assigned to the measurement by the user
+    Returns:    NA
     '''
     def cb_new_meas_save_button_pressed(self, window, meas_name, meas_desc, event=None):
 
@@ -1396,15 +1362,12 @@ class measure_session():
         # Destroy the save window
         window.destroy()
 
-
     '''----NEW SESSION WINDOW CALLBACKS----'''
     '''
     Function Description: Callback Function. Used to save a description of the new session.
-
     Parameters: window - parent tkinter container
-    desc - description of session
-
-    Returns: Na
+                desc - description of session
+    Returns:    NA
     '''
     def cb_new_session_descr_save_button_pressed(self, window, desc):
 
@@ -1419,12 +1382,10 @@ class measure_session():
        
     '''
     Function Description: Defines a savefile prompt box to save a new session
-    .json file. After selecting, creates a new window so the user can input a 
-    desription of this new session
-
+            .json file. After selecting, creates a new window so the user can input a 
+            desription of this new session
     Parameters: None
-
-    Returns: None
+    Returns:    None
     '''        
     def cb_create_new_session(self):
         
@@ -1466,14 +1427,11 @@ class measure_session():
         self.influence_textbox.config(state='normal')
 
     '''----GENERAL CALLBACKS----'''
-    
     '''
     Function description: Callback Function. Takes a new
-    measurement from the spectrum analyser. Plots to canvas in GUI
-
+            measurement from the spectrum analyser. Plots to canvas in GUI
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def cb_new_measure(self):
 
@@ -1485,10 +1443,8 @@ class measure_session():
 
     '''
     Function Description: Called when an update to the peaks entryboxes is made
-
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def cb_peaks_update(self, name, index, mode):
         
@@ -1526,20 +1482,16 @@ class measure_session():
 
 '''
 Desc: Creates a GUI for plotting previous session measurements saved as .json files
-
 Parameters: NA
-
-Returns: NA
+Returns:    NA
 '''
 class plot_session():
 
     '''Window Generation Functions'''
     '''
     Function Description: Initialises plotting GUI window
-
     Parameters: window - Tkinter window object
-
-    Returns: NA
+    Returns:    NA
     '''
     def __init__(self, window):
         # Init class variables
@@ -1549,6 +1501,15 @@ class plot_session():
         self.tree_measurement = None    # tree for measurements in each jason file
         self.selection_tree = None      # Tree for measurements selected 
         
+        # Frame tkinter objects
+        self.parent_frame = None        # Parent frame placed over parent window
+        self.frame_directory = None     # Frame with directory textbox
+        self.frame_metadata = None      # Frame to display session/measure metadata
+        self.frame_json = None          # Frame to hold filetree for sessions list
+        self.frame_measurement = None   # Frame to hold filetree for measuerments list
+        self.frame_buttons = None       # Frame with buttons
+        self.frame_selection = None     # Frame to hold filetree for measurements selection to plot
+
         self.curr_directory = os.getcwd()   # Get current directory
 
         # Used for listing files
@@ -1573,8 +1534,6 @@ class plot_session():
         '''
         Frame Definitions
         '''
-        # Generate GUI window
-        # self.window = ttk_b.Window(themename = theme["default"])
         # Define window size
         self.window.geometry(str(sizex) + 'x' + str(sizey))
         # Set title for window
@@ -1594,14 +1553,22 @@ class plot_session():
 
         # Ensure display frame expands with window as required
         self.window.columnconfigure(0, weight=1)
-        self.window.columnconfigure(1, weight=1)
-        self.window.columnconfigure(3, weight=1)
-        self.window.rowconfigure(2, weight=1)
+        self.window.rowconfigure(0, weight=1)
 
         # Create a menu Bar
         create_menubar(self.window)
         # Set previously saved theme
         set_theme(self.window)
+
+        # Create a parent frame
+        # Note: Theme changes dont seem to work properly on the parent window,
+        # So I am adding a frame over the parent window
+        self.parent_frame = define_frame(self.window, 0, 0, NSEW)
+        self.parent_frame.columnconfigure(0, weight=1)
+        self.parent_frame.columnconfigure(1, weight=1)
+        self.parent_frame.columnconfigure(3, weight=1)
+        self.parent_frame.rowconfigure(2, weight=1)
+        
         # Create framework
         self.create_frames()
         self.create_widgets()
@@ -1615,14 +1582,12 @@ class plot_session():
         # Print json files in current directory/sub-directories to sessions tree
         for file in self.json_files:
             self.tree_json.insert('',END, values= file.get("filename"))
-    
+        
     '''
     Function Description: Fills directory textbox with latest
-    filepath selected by the user. Updates .json session tree
-
+            filepath selected by the user. Updates .json session tree
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def update_directory(self):
         self.curr_directory = filedialog.askdirectory()
@@ -1646,10 +1611,8 @@ class plot_session():
        
     '''
     Function Description: Generate required frames for plotting GUI window
-
     Parameters: NA
-
-    Results: NA
+    Results:    NA
     '''
     def create_frames(self):
         
@@ -1666,7 +1629,7 @@ class plot_session():
 
 
         # Define parent directory frame at the top
-        self.frame_directory = define_frame(self.window, pos_directory_frame[0], pos_directory_frame[1], NSEW)
+        self.frame_directory = define_frame(self.parent_frame, pos_directory_frame[0], pos_directory_frame[1], NSEW)
         # Ensure the box expands with the frame in the x axis
         self.frame_directory.columnconfigure(0, weight=1)
         self.frame_directory.rowconfigure(0, weight=1)
@@ -1674,7 +1637,7 @@ class plot_session():
         self.frame_directory.grid(columnspan=4)
 
         # Define metadata frame at the top
-        self.frame_metadata = define_frame(self.window, pos_metadata_frame[0], pos_metadata_frame[1], NSEW)
+        self.frame_metadata = define_frame(self.parent_frame, pos_metadata_frame[0], pos_metadata_frame[1], NSEW)
         # Ensure the box expands with the frame in the x axis
         self.frame_metadata.columnconfigure(0, weight=1)
         self.frame_metadata.rowconfigure(0, weight=1)
@@ -1682,37 +1645,35 @@ class plot_session():
         self.frame_metadata.grid(columnspan=4)
 
         # define Json file list on the left
-        self.frame_json = define_frame(self.window, pos_json_frame[0], pos_json_frame[1], NSEW)
+        self.frame_json = define_frame(self.parent_frame, pos_json_frame[0], pos_json_frame[1], NSEW)
         # Ensure the box expands with the frame in x,y axis
         self.frame_json.columnconfigure(0, weight=1)
         self.frame_json.rowconfigure(1, weight=1)
         
         # define measurement in selected json file on the right of above
-        self.frame_measurement = define_frame(self.window, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
+        self.frame_measurement = define_frame(self.parent_frame, pos_measurement_frame[0], pos_measurement_frame[1], NSEW)
         # Ensure the box expands with the frame in x,y axis
         self.frame_measurement.columnconfigure(0, weight=1)
         self.frame_measurement.rowconfigure(1, weight=1)
 
         # define buttons frame on right of above (Select, Clear, Plot)
-        self.frame_buttons = define_frame(self.window, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
+        self.frame_buttons = define_frame(self.parent_frame, pos_buttons_frame[0], pos_buttons_frame[1], NSEW)
 
         # define final selection frame on the right of above
-        self.frame_selection = define_frame(self.window, pos_selection_frame[0], pos_selection_frame[1], NSEW)
+        self.frame_selection = define_frame(self.parent_frame, pos_selection_frame[0], pos_selection_frame[1], NSEW)
         # Ensure the box expands with the frame in the x,y axis
         self.frame_selection.columnconfigure(0, weight=1)
         self.frame_selection.rowconfigure(1, weight=1)
 
         # Define lower buffer frame at bottom
-        frame_buf = define_frame(self.window, pos_buf_frame[0], pos_buf_frame[1], S)
+        frame_buf = define_frame(self.parent_frame, pos_buf_frame[0], pos_buf_frame[1], S)
         # Ensure the frame expands across all columns
         frame_buf.grid(columnspan=4)
 
     '''
     Function Description: Defines widgets for each frame
-
     Parameters: NA
-
-    Results: NA
+    Results:    NA
     '''
     def create_widgets(self):
 
@@ -1778,12 +1739,12 @@ class plot_session():
 
     '''Callback Functions'''
     '''
-    Function Description: Callback Function. Called when the user selects a json file in the json
-    session tree. Writes description to the metadata entry box and updates the measurements tree list widget.
-
+    Function Description: Callback Function. Called when 
+            the user selects a json file in the json session 
+            tree. Writes description to the metadata entry 
+            box and updates the measurements tree list widget.
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def cb_json_selected(self, event):
         # Get list of items selected
@@ -1831,9 +1792,7 @@ class plot_session():
         with all measurement data. Appends to list of selected measurements.
         Appends the json file name and path associated with this measurement
         to measurement dictionary to be used for labelling in plots
-
     Parameters: NA
-
     Returns: NA
     '''
     def cb_measurement_selected(self, event):
@@ -1872,10 +1831,8 @@ class plot_session():
     '''
     Function Description: Callback Function. Called when the user selects items in 
     the plot selection tree. Appends the selected items to a list tracking selected items
-
     Parameters: NA
-
-    Returns: NA 
+    Returns:    NA 
     '''
     def cb_selection_selected(self, event):
 
@@ -1906,12 +1863,10 @@ class plot_session():
 
     '''
     Function Description: Callback function. Called when the right button is pressed. 
-    Moves selected items from measurement tree to selection tree. Appends associated 
-    measurement objects to list to be plotted
-
+            Moves selected items from measurement tree to selection tree. Appends associated 
+            measurement objects to list to be plotted
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''    
     def cb_rb_pressed(self):
         
@@ -1932,11 +1887,10 @@ class plot_session():
         
     '''
     Function Description: Callback Function. Called when the left button is pressed. 
-    Removes selected items from selection tree. Removes associated measurement objects from list to be plotted 
-    
+            Removes selected items from selection tree. Removes associated 
+            measurement objects from list to be plotted 
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def cb_lb_pressed(self):
 
@@ -1949,11 +1903,9 @@ class plot_session():
 
     '''
     Function Description: Callback function. Called when plot button is pressed. 
-    Plots list of measurement objects in selection tree
-
+            Plots list of measurement objects in selection tree
     Parameters: NA
-
-    Results: NA
+    Results:    NA
     '''
     def cb_pltb_pressed(self):
         
@@ -1962,11 +1914,10 @@ class plot_session():
 
     '''
     Function Description: Callback Function. Called when clear button is pressed. 
-    Clears list of items from selection tree and clears list of measurement objects to be plotted
-
+            Clears list of items from selection tree and clears list of 
+            measurement objects to be plotted
     Parameters: NA
-
-    Returns: NA
+    Returns:    NA
     '''
     def cb_clrb_pressed(self):
 
