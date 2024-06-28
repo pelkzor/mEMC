@@ -23,11 +23,10 @@ class DSA832(Instrument):
         # Load commands
         self.loadcmd()
 
-        '''!!!!!!!!!!!!!DISABLED FOR TESTING!!!!!!!!!!!!!!!!!!!!'''
         # Establish connection to device
-        #self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #self.sock.connect((ip, 5555))
-        #self.sock.setblocking(False)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((ip, 5555))
+        self.sock.setblocking(False)
     
     # Load commands from json file
     def loadcmd(self):
