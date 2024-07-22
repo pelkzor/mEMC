@@ -312,6 +312,14 @@ class Measurement:
         self.data = []
         self.create()
 
+        for k,v in self.cfg.items():
+            if k not in ['fstart','fstop','tracemode','Name']:
+                #print(k,v)
+                self.device.cmd(k,self.cfg[k])
+        
+        print('debug')
+        time.sleep(10)
+
         for m in self.mlist:
             # Commented out setter function in DSA832 implementation. Kept in case required for future
             '''

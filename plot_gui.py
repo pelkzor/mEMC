@@ -1087,7 +1087,7 @@ class measure_session():
         widgets["rbw"].insert(END, curr_config['rbw'])
         widgets["vbw"].insert(END, curr_config['vbw'])
         widgets["amp"].insert(END, curr_config['amp'])
-        widgets["atten"].insert(END, curr_config['amp'])
+        widgets["atten"].insert(END, curr_config['atten'])
         widgets["detector"].insert(END, curr_config['detector'])
         widgets["emifilter"].insert(END, curr_config['emifilter'])
         widgets["sweeppoints"].insert(END, curr_config['sweeppoints'])
