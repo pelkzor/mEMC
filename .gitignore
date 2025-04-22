@@ -1,2 +1,5 @@
 .settings/
 __pycache__/
+venv_EMC/
+oldfiles/
+emc.log

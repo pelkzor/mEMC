@@ -1,0 +1,19 @@
+{
+	"name": "meascfg1",
+	"type": "measurementtemplate",
+	"template" : {
+		"continuous":0, 
+		"fstart":50000000, 
+		"fstop":1000000000, 
+		"rbw":120000, 
+		"preamplifier":1, 
+		"attenuation":0, 
+		"detector":"Positive", 
+		"emifilter":1, 
+		"sweeppoints":601, 
+		"sweepcount":20, 
+		"tracemode":"Maxhold", 
+		"unit":"dBuV", 
+		"offset":0
+	}
+}

@@ -10,29 +10,34 @@ class Instrument():
     # Initialise communication 
     # Read data from cmd's file
     def __init__(self):
-        pass
-    
+        pass    
+
     @abstractmethod
-    # Load commands from json file
-    def loadcmd(self, filename):
+    # initialize instrument with default parameters
+    def default(self):
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
 
     @abstractmethod
-    # prepares cmd ascii message to be sent to device
-    def cmd(self, cmd, arg1 = None, arg2 = None):
-        print("Error: ", inspect.stack()[0][3], " Un-implemented")        
-        
-    @abstractmethod   
-    # Send command
-    def send(self, cmd):
+    # set variable value in instrument
+    def set(self, name, value):
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
-                
+
     @abstractmethod
-    # Receive message from device
-    def recv(self, handler=None):
+    # get value from instrument
+    def get(self, name):
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
-        
+
     @abstractmethod
-    # Format raw data into floats
-    def processtrace(self, data):
+    # return dict with instrument variables
+    def getproperties(self):
+        print("Error: ", inspect.stack()[0][3], " Un-implemented")                
+
+    @abstractmethod
+    # connect instrument
+    def connect(self, address, port):
+        print("Error: ", inspect.stack()[0][3], " Un-implemented")
+
+    @abstractmethod
+    # disconnect instrument
+    def disconnect(self):
         print("Error: ", inspect.stack()[0][3], " Un-implemented")
