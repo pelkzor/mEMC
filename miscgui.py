@@ -545,7 +545,9 @@ class EUTFrame(ttk_b.Frame):
 class PlotFrame(ttk_b.Frame):
     def __init__(self, parent):
         super().__init__(parent)
-        self.point = None                         
+        self.point = None
+        self.measurement = None
+        self.peaklist = []                      
         self.fig = plt.Figure(figsize=(14, 7), dpi=100)
         self.ax = self.fig.add_subplot()
 
@@ -585,7 +587,7 @@ class PlotFrame(ttk_b.Frame):
         self.pointframe.pack(expand=True, fill='x')
 
         self.tvframe = ttk_b.Frame(self)
-        self.treeview = ttk_b.Treeview(self.tvframe,columns=('freq','qp','limit','margin'))
+        self.treeview = ttk_b.Treeview(self.tvframe,columns=('freq','qp','limit','margin'), selectmode=ttk_b.BROWSE)
         self.treeview.pack(side='left')
         self.treeview.column('#0',width=0, stretch='no', anchor='center')
         self.treeview.column('freq',anchor='center')
@@ -603,13 +605,47 @@ class PlotFrame(ttk_b.Frame):
         #self.tvframe.grid(row=3, column=0, columnspan=4, sticky='NSEW')
         self.tvframe.pack(expand=True, fill='both')
 
+        self.btnmeasureqp = ttk_b.Button(self, text='Measure selected QP', command=self.measureqp)
+        self.btnmeasureqp.pack()
+
         #for i in range(10):           
         #    tvi = self.treeview.insert('',ttk_b.END, iid=i, values=('abc','345','ert'))
         #    print(tvi, type(tvi))
 
+    def getpeak(self, iid):
+        for p in self.peaklist:
+            if iid == p['iid']:
+                return p
+        return None
+
+    def measureqp(self):
+        if self.measurement is None:
+            return
+        item = self.treeview.focus()
+        print('item:', item, 'len(item):', len(item))
+        peak = self.getpeak(item)
+        if peak is not None:                        
+            peak['qpk'] = self.measurement.measureqp_thread(peak['freq'])
+            self.updatepeakview()
+            self.plotpeaks()
+
     def onaddpoint(self):
-        if self.point is not None:
-            self.treeview.insert('',ttk_b.END, values=(self.point[0],self.point[1],''))
+        if self.point is not None:            
+            iid = str(round(self.point[0]/1000000,3))
+            #self.peaklist.append([iid, self.point[0], self.point[1], None, None])            
+            self.peaklist.append({'iid':iid, 'freq':self.point[0], 'pk':self.point[1], 'qpk':None, 'limit': None})            
+            self.updatepeakview()
+            self.plotpeaks()
+            for i in self.peaklist:
+                print(i)
+
+    def updatepeakview(self):
+        for i in self.treeview.get_children():
+            self.treeview.delete(i)
+        self.peaklist.sort(key = lambda x: x['freq'])
+        for p in self.peaklist:
+            MHz = round(p['freq']/1000000,3)
+            self.treeview.insert('',ttk_b.END, iid=p['iid'], values=(MHz, p['qpk'], p['limit'], None))
 
     def btnevent(self):
         s = self.testentry.get()        
@@ -617,8 +653,28 @@ class PlotFrame(ttk_b.Frame):
         print('item:', self.treeview.item(s))
         self.treeview.set(s, 2, 'Test123')
 
-    def plot(self, meas, xlim=(30_000_000,1_000_000_000), ylim=(0,60)):        
+    def plotpeaks(self):
+        if len(self.peaklist):            
+            if hasattr(self,'peakplot') and self.peakplot is not None:
+                self.peakplot.remove()
+            if hasattr(self,'qpeakplot') and self.qpeakplot is not None:
+                self.qpeakplot.remove()
+            peakx = [ i['freq'] for i in self.peaklist if i['qpk'] is None]
+            peaky = [ i['pk'] for i in self.peaklist if i['qpk'] is None]            
+            
+            qpeakx = [ i['freq'] for i in self.peaklist if i['qpk'] is not None]
+            qpeaky= [ i['qpk'] for i in self.peaklist if i['qpk'] is not None]
+            
+            self.peakplot = self.ax.scatter(peakx, peaky, color='blue', marker='x')
+            if len(qpeaky):
+                self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, color='red', marker='^')
+            print('peakplot:', self.peakplot)
+            self.canvas.draw()            
+
+    def plot(self, meas, title='title', xlim=(30_000_000,1_000_000_000), ylim=(0,60)):        
         
+        if self.measurement is None:
+            self.measurement = meas
         # Apply corrections to voltage readings
         #fclist = loadcorrection('tbaf1m.csv')
         #datax = meas["Frequency"]
@@ -629,9 +685,9 @@ class PlotFrame(ttk_b.Frame):
 
         #self.fig, self.ax = plt.subplots(1,1)
         #self.ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
-        self.ax.set_title('title')
-        self.ax.set_xlabel('xlabel')
-        self.ax.set_ylabel('ylabel')
+        self.ax.set_title(title)
+        self.ax.set_xlabel('Frequency [Hz]')
+        self.ax.set_ylabel('dBuV')
 
         self.fig.text(0.01,0.95,'notes:')
         self.ax.set_ylim(ylim)
@@ -866,7 +922,8 @@ class MeasureWindow(ttk_b.Toplevel):
                         else:
                             Messagebox.show_error('Some of the values in EUT config or Measurement config\nare invalid', title='Error', alert=True, parent=self)
                     case MeasurementState.DONE:
-                        self.savemeasurement()
+                        self.measstate = MeasurementState.READY
+                        #self.savemeasurement()
                     
             case (MSG.SETWORKDIR,path):
                 self.workdir = path

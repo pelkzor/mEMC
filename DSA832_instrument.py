@@ -203,6 +203,22 @@ class Measurement():
     def setconfig(self, config : dict):
         self.meascfg = { k:v for (k,v) in config.items() if v is not None}
 
+
+    def measureqp_thread(self, freq):
+
+        self.instrument.set('fstart',freq)
+        self.instrument.set('fstop',freq)
+        self.instrument.set('fspan',0)
+        self.instrument.set('tracemode', 'Maxhold')
+        self.instrument.set('detector','QPeak')
+        sweeptime = self.instrument.get('sweeptime')
+        self.instrument.set('initiate',1)
+        time.sleep(sweeptime * self.meascfg['sweepcount'] + 1)
+        while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
+            self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
+        data = self.instrument.get('data')
+        return max(data)    
+
     def measure_thread(self, msgqueue : queue.SimpleQueue):
         self.runthread = True  
         self.data = []
@@ -214,11 +230,10 @@ class Measurement():
                 #print('setting', k, v)
                 self.instrument.set(k,v)
         
-        for m in self.submeaslist:
-            msgqueue.put(('msg','Segment...'))
+        for m in self.submeaslist:            
             self.instrument.set('fstart',m[0])
             self.instrument.set('fstop',m[1])
-            self.instrument.set('tracemode', self.meascfg['tracemode'])          
+            self.instrument.set('tracemode', self.meascfg['tracemode'])
             sweeptime = self.instrument.get('sweeptime')
             self.instrument.set('initiate',1)
             #print('st = ', sweeptime)

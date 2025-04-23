@@ -4,7 +4,7 @@
 	"template" : {
 		"continuous":0, 
 		"fstart":30000000, 
-		"fstop":1000000000, 
+		"fstop":100000000, 
 		"rbw":120000,  
 		"preamplifier":1, 
 		"attenuation":0, 
