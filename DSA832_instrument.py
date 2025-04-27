@@ -79,7 +79,7 @@ class DSA832(Instrument):
         
     def connect(self, ip = '192.168.1.70', port=5555):               
         try:
-            self.sock.settimeout(2)
+            self.sock.settimeout(5)
             self.sock.connect((ip, port))
             #self.sock.setblocking(False)
             return True
@@ -141,12 +141,15 @@ class DSA832(Instrument):
     
     # Receive message from device
     def recv(self) -> bytes:        
-        data = BytesIO()
-        for _ in range(20):
-            data.write(self.sock.recv(12000))
-            if b'\n' in data.getvalue():
-                return data.getvalue().decode('utf-8').strip()
-            time.sleep(0.1)        
+        try:
+            data = BytesIO()
+            for _ in range(20):
+                data.write(self.sock.recv(12000))
+                if b'\n' in data.getvalue():
+                    return data.getvalue().decode('utf-8').strip()
+                time.sleep(0.1)
+        except TimeoutError:
+            print('TimeoutError: No data received') #!!! Todo: handle as error        
         
     # Format trace data from string to floats
     def processtrace(self, data) -> float:
@@ -221,7 +224,7 @@ class Measurement():
 
     def measure_thread(self, msgqueue : queue.SimpleQueue):
         self.runthread = True  
-        self.data = []
+        self.ydata = []
         self.meascfg = self.instrument.defaultparams | self.meascfg
         self.createsubmeasurements()
 
@@ -241,7 +244,7 @@ class Measurement():
             time.sleep(sweeptime * self.meascfg['sweepcount'] + 1)
             while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
                 self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
-            self.data.extend(self.instrument.get('data'))
+            self.ydata.extend(self.instrument.get('data'))
             self.createfrequencylist(m[1])
             msgqueue.put((MSG.THREAD,THREADMSG.DATA,None))
         self.runthread = False
@@ -274,13 +277,13 @@ class Measurement():
     def createfrequencylist(self, fstop = None):
         if fstop is None:
             fstop = self.meascfg['fstop']
-        step = (fstop - self.meascfg['fstart']) / len(self.data)
-        self.datax = [ self.meascfg['fstart'] + step//2 + n * step for n in range(len(self.data))]
+        step = (fstop - self.meascfg['fstart']) / len(self.ydata)
+        self.xdata = [ int(self.meascfg['fstart'] + step//2 + n * step) for n in range(len(self.ydata))]
 
-    #adjusts data in self.data according to self.corr
+    #adjusts data in self.ydata according to self.corr
     def applycorrection(self):       
-        for i in range(len(self.data)):
-            self.data[i] = self.data[i] + self.getfc(self.datax[i])
+        for i in range(len(self.ydata)):
+            self.ydata[i] = self.ydata[i] + self.getfc(self.xdata[i])
         
     #get correction for specific frequency
     def getfc(self, freq):

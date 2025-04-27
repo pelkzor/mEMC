@@ -23,7 +23,7 @@ from message import MSG
 import queue
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.INFO)
 logger.error('Starting')
 
 
@@ -577,9 +577,9 @@ class PlotFrame(ttk_b.Frame):
         '''
         self.pointframe = ttk_b.Frame(self)
         ttk_b.Label(self.pointframe, text='Add point',width=16, anchor='w').pack(side='left')
-        self.pointentryf = ttk_b.Entry(self.pointframe)
+        self.pointentryf = ttk_b.Entry(self.pointframe, state='readonly')
         self.pointentryf.pack(side='left')
-        self.pointentrys = ttk_b.Entry(self.pointframe)
+        self.pointentrys = ttk_b.Entry(self.pointframe, state='readonly')
         self.pointentrys.pack(side='left')
         self.btnaddpoint = ttk_b.Button(self.pointframe, text='Add', command=self.onaddpoint)
         self.btnaddpoint.pack(side='left')
@@ -698,7 +698,7 @@ class PlotFrame(ttk_b.Frame):
         mkformatter = ticker.FuncFormatter(mkfunc)
         self.ax.xaxis.set_major_formatter(mkformatter)
 
-        line = self.ax.plot(meas.datax, meas.data, linewidth = 0.5, label = 'test')
+        line = self.ax.plot(meas.xdata, meas.ydata, linewidth = 0.5, label = 'test')
         #line2 = self.ax.plot(meas.datax, [x-3 for x in meas.data], linewidth = 0.5, label = 'test')
 
         cursor = mplcursors.cursor(line)
@@ -721,10 +721,14 @@ class PlotFrame(ttk_b.Frame):
     
     def onpointselect(self, evt):
         self.point = (evt.target[0], evt.target[1])
+        self.pointentryf.config(state = 'normal')
+        self.pointentrys.config(state = 'normal')
         self.pointentryf.delete(0,END)
         self.pointentryf.insert(0,str(self.point[0]))
         self.pointentrys.delete(0,END)
         self.pointentrys.insert(0,str(self.point[1]))
+        self.pointentryf.config(state = 'readonly')
+        self.pointentrys.config(state = 'readonly')
 
 class ConfigView(ttk_b.Frame):
 
@@ -815,6 +819,7 @@ class MeasureWindow(ttk_b.Toplevel):
         self.msgqueue = queue.SimpleQueue()
         self.cfgview = ConfigView(self)
         self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')
+        self.savedata = {}
 
         #self.btn = ttk_b.Button(self, text='Measure', command = lambda : self.onevent(('measure',)))
         #self.btn = ttk_b.Button(self, text='Start Measurment', command = self.onbtn)
@@ -866,12 +871,25 @@ class MeasureWindow(ttk_b.Toplevel):
         self.cfgview.updatestate(self.measstate)
         self.after(500, self.ontimer)
         
+    def savemeasurement(self):    
+        
+        self.savedata['type'] = 'result'
+        self.savedata['name'] = self.cfgview.measureframe.measname.get()
+        self.savedata['time'] = time.strftime('%y%m%d%H%M%S')
+        self.savedata['comment'] = 'testcomment'        
+        self.savedata['eutconfig'] = self.cfgview.get_eutconfig()
+        self.savedata['ydata'] = self.measurement.ydata
+        self.savedata['xdata'] = self.measurement.xdata
+        
+        fname = self.savedata['time'] + '_' + self.savedata['name'] + '.json'
+        with open(self.workdir / 'resultfile.json', 'w') as fout:
+            fout.write(json.dumps(self.savedata, indent=4))
         
 
     def onevent(self, evt):
 
         print('Event:',evt)
-
+            
         match evt:
             case (MSG.CONNECT,a ,b):
                 self.instrument = DSA832()
@@ -889,9 +907,8 @@ class MeasureWindow(ttk_b.Toplevel):
                 self.mcfgpath = path
                 templ = load_template(path, _TEMPLATETYPE_MEASUREMENT)
                 if templ is not None:
-                    templ = Measurement.modifytemplate(templ[_TEMPLATE_KEY])
-                    print(templ)
-                    self.cfgview.updatemeasurementtemplate(templ)
+                    self.meastemplate = Measurement.modifytemplate(templ[_TEMPLATE_KEY])                    
+                    self.cfgview.updatemeasurementtemplate(self.meastemplate)
 
             case (MSG.SETEUTTEMPLATE, name, path):
                 self.eutcfgpath = path
@@ -914,7 +931,8 @@ class MeasureWindow(ttk_b.Toplevel):
                         if self.cfgview.isvalid():
                             self.measurement = Measurement(self.instrument)
                             meascfg = (self.cfgview.get_measconfig())
-                            self.measurement.setconfig(meascfg)                    
+                            self.savedata['measurementconfig'] = meascfg                            
+                            self.measurement.setconfig(meascfg)                
                             #self.measurement = Measurement()
                             #self.measurement.loadconfig(self.mcfgpath)
                             self.measurement.startmeasurement(msgqueue = self.msgqueue)
@@ -923,10 +941,10 @@ class MeasureWindow(ttk_b.Toplevel):
                             Messagebox.show_error('Some of the values in EUT config or Measurement config\nare invalid', title='Error', alert=True, parent=self)
                     case MeasurementState.DONE:
                         self.measstate = MeasurementState.READY
-                        #self.savemeasurement()
+                        self.savemeasurement()
                     
             case (MSG.SETWORKDIR,path):
-                self.workdir = path
+                self.workdir = Path(path)
 
             case (MSG.SETVAR, varname, value):
                 print(varname, value)
