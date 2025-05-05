@@ -8,7 +8,6 @@ from ttkbootstrap.dialogs.dialogs import Messagebox
 
 from tkinter import ttk
 from tkinter import filedialog
-import json
 from pathlib import Path
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
@@ -16,14 +15,19 @@ from matplotlib import ticker
 import mplcursors
 from matplotlib.backend_bases import key_press_handler
 
-from DSA832_instrument import *
+from measurement import Measurement
+#from DSA832_instrument import DSA832
+#from simulator_instrument import Simulator
+from secrets import token_hex
+import json
+import time
 
 from enum import IntEnum, auto
-from message import MSG
+from message import *
 import queue
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.ERROR)
 logger.error('Starting')
 
 
@@ -39,6 +43,29 @@ _CORRECTION_PATH = './correction'
 _TEMPLATETYPE_MEASUREMENT = 'measurementtemplate'
 _TEMPLATETYPE_EUT = 'euttemplate'
 _TEMPLATE_KEY = 'template'
+
+
+import sys
+import importlib.util
+
+def load_module(source, module_name):
+	
+	spec = importlib.util.spec_from_file_location(module_name, source)
+	module = importlib.util.module_from_spec(spec)
+	sys.modules[module_name] = module
+	spec.loader.exec_module(module)
+	return module
+
+
+def load_instruments():
+    ilist = []
+    filenames = list(Path('./instruments').glob('*.py'))
+    for fname in filenames:
+        mod = load_module(fname, token_hex(16))
+        inst = mod.Instrument
+        name = inst.name
+        ilist.append((name, inst))
+    return ilist
 
 def get_measurementconfigs():
     filenames = list(Path(_MEASUREMENT_PATH).glob('*.json'))    
@@ -115,6 +142,24 @@ class DefaultGridField():
         self.nlabel.grid_forget()
         self.entry.grid_forget()
         self.ulabel.grid_forget()
+
+class EntryFrame(ttk_b.Frame):
+
+    def __init__(self, parent, varname, title, value, evttarget=None):
+
+        super().__init__(parent)
+        if evttarget is None:
+            evttarget = parent
+
+        self.sval = ttk_b.StringVar()
+        self.sval.trace_add('write', lambda *_: evttarget.onevent((MSG.SETVAR,varname,self.sval.get()))) #changed to validate function
+        self.nlabel = ttk_b.Label(self, text = title, anchor='w')
+        self.entry = ttk_b.Entry(self, textvariable=self.sval )#, validate='focusout', validatecommand=self.validate)        
+        self.nlabel.grid(row=0, column=0, padx=5, pady=5, sticky='EW')
+        self.entry.grid(row=0, column=1, padx=5, pady=5, sticky='EW')
+
+    def get(self):
+        return self.sval.get()
 
 class ValueField(DefaultGridField):
 
@@ -377,47 +422,6 @@ class ConfigEditor(ttk_b.Frame):
     def getdata(self):               
         return {k: v.getvalue() for k,v in self.fields.items()}
 
-class ResultTable(ttk_b.Frame):
-
-    def __init__(self, parent):
-        super(ResultTable, self).__init__(parent)
-
-        coldata = [
-            {'text': 'Plot', 'width': 40},
-            {"text": "LicenseNumber", "stretch": False},
-            "CompanyName",
-            {"text": "UserCount", "stretch": False},
-        ]
-
-        rowdata = [
-            ('','A123', 'IzzyCo', 12),
-            ('','A136', 'Kimdee Inc.', 45),
-            ('','A158', 'Farmadding Co.', 36)
-        ]
-
-        self.table = Tableview(self, coldata=coldata, rowdata=rowdata, paginated=False, searchable=True, bootstyle=PRIMARY)#, stripecolor=(colors.light, None))
-        self.table.pack(side='left', fill=BOTH, expand=True)
-        self.table.view.bind('<Double-1>', self.on_dclick)
-        self.tvscroll = ttk.Scrollbar(self, orient='vertical', command=self.table.view.yview)
-        self.table.view.config(yscrollcommand=self.tvscroll.set)
-        self.tvscroll.pack(side='left',fill='y')
-
-
-        for i in range(500):
-            self.table.insert_row('end', ['', f'test{i}', 'abc' , 123])            
-        self.table.load_table_data()
-        #print(self.table.get_rows())
-    
-    def on_dclick(self, evt):
-        rowid = self.table.view.identify_row(evt.y)
-        row = self.table.get_row(iid=rowid)
-        if row.values[0] == 'X':
-            row.values[0] = ''
-        else:
-            row.values[0] = 'X'
-        row.refresh()
-        print(row.values)
-        
 
 class TreeFrame(ttk_b.Frame):
 
@@ -448,37 +452,31 @@ class TreeFrame(ttk_b.Frame):
         #self.treeview.insert('',ttk_b.END, text='Treeitem', values=('abc','345','ert'))
 
 
-class ResultBrowser(ttk_b.Toplevel):
-    def __init__(self):
-        super().__init__()
-
-        self.tv = TreeFrame(self)
-        self.tv.pack()
-        self.table = ResultTable(self)
-        self.table.pack()
-        self.valuetest = ConfigEditor(self)
-        self.valuetest.pack()
-
-
 class ToolBar(ttk_b.Frame):
 
-    def __init__(self, parent, defaultipaddress='192.168.1.70', instrumentlist=None, defaultinstrument=None):
+    def __init__(self, parent, defaultipaddress='192.168.1.70', ilist=None, defaultinstrument=None):
         super().__init__(parent)        
         self.isconnected = False
         self.parent = parent
 
         ttk_b.Label(self, text='Instrument',width=25, anchor='e').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD,sticky='EW')
-        self.instrument = ttk_b.StringVar()
-        self.instrumentselect = ttk_b.Combobox(self, values=instrumentlist, textvariable=self.instrument, state='readonly', width=32)        
+        
+        self.instrumentvar = ttk_b.StringVar()
+        
+        self.instrumentvar.trace_add('write', lambda *_: parent.onevent((MSG.SETVAR,'instrumentname',self.instrumentvar.get()))) 
+        self.instrumentselect = ttk_b.Combobox(self, values=[i[0] for i in ilist], textvariable=self.instrumentvar, state='readonly', width=32)        
+        #self.instrumentselect.bind("<<ComboboxSelected>>", lambda: parent.onevent((MSG.SETVAR,'instrumentname',self.instrumentvar.get())))
         self.instrumentselect.grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW') 
 
         ttk_b.Label(self, text='IP address [:port]',width=25, anchor='e').grid(row=1, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
-        self.ipaddress = ttk_b.StringVar()
-        self.ipaddress.set(defaultipaddress)
-        self.ipaddressentry = ttk_b.Entry(self, textvariable=self.ipaddress, width=32)
+        
+        self.ipaddressvar = ttk_b.StringVar()
+        self.ipaddressvar.trace_add('write', lambda *_: parent.onevent((MSG.SETVAR,'ipaddress',self.ipaddressvar.get()))) #changed to validate function
+        self.ipaddressvar.set(defaultipaddress)
+        self.ipaddressentry = ttk_b.Entry(self, textvariable=self.ipaddressvar, width=32)
         self.ipaddressentry.grid(row=1, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
-        self.btnconnect = ttk_b.Button(self, text='Connect', command = lambda : parent.onevent((MSG.DISCONNECT if self.isconnected else MSG.CONNECT,self.instrument.get(),self.ipaddress.get())))
+        self.btnconnect = ttk_b.Button(self, text='Connect', command = lambda : parent.onevent((MSG.DISCONNECT if self.isconnected else MSG.CONNECT,self.instrumentvar.get(),self.ipaddressvar.get())))
         self.btnconnect.grid(row=2, column=0, columnspan=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='NSEW')
 
         #self.btnmeasure = ttk_b.Button(self, text='Measure', command = lambda : parent.onevent((MSG.MEASURE,)))
@@ -506,10 +504,10 @@ class ToolBar(ttk_b.Frame):
 
         if defaultinstrument is not None:
             try:
-                self.instrument.current = instrumentlist.index(defaultinstrument)
-                self.instrument.set(defaultinstrument)
+                self.instrumentselect.current = [i[0] for i in ilist].index(defaultinstrument)
+                self.instrumentvar.set(defaultinstrument)
             except:
-                self.instrument.current = 0
+                self.instrumentselect.current = 0
 
     def selectworkdir(self, e):
         workdir = filedialog.askdirectory(initialdir='.', title='Select working directory')
@@ -517,7 +515,7 @@ class ToolBar(ttk_b.Frame):
         if len(workdir):
             self.workdir.set(workdir)
             print('workdir set to', workdir)
-            self.parent.onevent((MSG.SETWORKDIR,workdir))
+            self.parent.onevent((MSG.SETVAR,'workdir',workdir))
 
 
     def setstate(self, connstate : bool):
@@ -702,7 +700,8 @@ class PlotFrame(ttk_b.Frame):
         #line2 = self.ax.plot(meas.datax, [x-3 for x in meas.data], linewidth = 0.5, label = 'test')
 
         cursor = mplcursors.cursor(line)
-        cursor.connect('add', self.onpointselect)        
+        cursor.connect('add', self.onpointselect)
+        
         #mplcursors.cursor(line2)
         '''if ref:
             axis.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
@@ -778,15 +777,18 @@ class MeasurementState(IntEnum):
 class MeasureFrame(ttk_b.Frame):
     
     def __init__(self, parent):
-        super().__init__(parent)        
-        self.measname = ttk_b.StringVar()        
+        super().__init__(parent)
         #self.measname.trace_add('write', lambda *_: parent.onevent( ('setvar','measname',self.measname.get()))) #changed to validate function
-        ttk_b.Label(self, text='Measurement name').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
-        ttk_b.Entry(self, textvariable=self.measname, validate='focusout', validatecommand=lambda : parent.onevent((MSG.SETVAR,'measname',self.measname.get()))).grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         
+        #ttk_b.Label(self, text='Measurement name').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
+        #ttk_b.Entry(self, textvariable=self.measname, validate='focusout', validatecommand=lambda : parent.onevent((MSG.SETVAR,'measname',self.measname.get()))).grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
+        self.measname = EntryFrame(self, 'measname', 'Measurement Name', '', parent)
+        self.measname.pack()
+
         self.measurebtn = ttk_b.Button(self, text='measure', command = lambda : parent.onevent((MSG.MEASURE,)))
+        self.measurebtn.pack()
         #self.measurebtn = ttk_b.Button(self, text='Start Measurement', command = self.onbtn)
-        self.measurebtn.grid(column=1, row=1)
+        #self.measurebtn.grid(column=1, row=1)
         self.updatestate(MeasurementState.DISABLED)    
 
     def updatestate(self, state: MeasurementState):
@@ -802,47 +804,50 @@ class MeasureFrame(ttk_b.Frame):
 
 class _MatchBreak(Exception): pass
 
-class MeasureWindow(ttk_b.Toplevel):
+class MeasureWindow(ttk_b.Window, EventHandler):
 
-    def __init__(self):
-        super().__init__()
-        self.tb = ToolBar(self,'192.168.1.70',['INST1','Rigol DSA832E','INST2'],'Rigol DSA832E')
-        #self.tb.pack(side='top', expand=True, fill=tk.BOTH)
-        self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')
+    def __init__(self, *args, **kwargs):
+        #super().__init__(*args, **kwargs)
+        ttk_b.Window.__init__(self, **kwargs)
+        EventHandler.__init__(self)
+        self.vars = {}
         self.instrument = None
         self.mcfgpath = None
-        self.eutcfgpath = None
-        self.workdir = None
+        self.eutcfgpath = None        
         self.measurement = None
         self.measstate = MeasurementState.DISABLED
-
         self.msgqueue = queue.SimpleQueue()
-        self.cfgview = ConfigView(self)
-        self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')
         self.savedata = {}
-
-        #self.btn = ttk_b.Button(self, text='Measure', command = lambda : self.onevent(('measure',)))
-        #self.btn = ttk_b.Button(self, text='Start Measurment', command = self.onbtn)
-        #self.btn.grid(column=0, row=3, sticky='NSEW')
-
-        self.plotframe = PlotFrame(self)
-        #self.plotframe.pack(side='top', expand=True, fill=tk.BOTH)
-        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2, sticky='NSEW')
-        #self.mcfg = MeasurementCfgFrame(self)
-        #self.mcfg.pack(side='left')
+        self.instrumentlist = load_instruments()
 
         self.columnconfigure(1,weight=1)
         self.columnconfigure(2,weight=1)
         self.columnconfigure(3,weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
+
+        self.tb = ToolBar(self,'192.168.1.70', ilist = self.instrumentlist)
+        self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
+
+        self.plotframe = PlotFrame(self)
+        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2, sticky='NSEW')        
+
+        self.cfgview = ConfigView(self)
+        self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')        
         #self.rowconfigure(3, weight=1)
-        self.after(500, self.ontimer)                         
+        self.after(500, self.ontimer)        
+
+    def getinstrument(self, name):        
+        try:
+            index = [i[0] for i in self.instrumentlist].index(name)
+            return self.instrumentlist[index][1]
+        except:
+            return None
 
     def ready(self):
         if self.mcfgpath is None:            
             return False
-        if self.workdir is None:            
+        if 'workdir' not in self.vars:            
             return False
         if self.eutcfgpath is None:
             return False
@@ -874,107 +879,97 @@ class MeasureWindow(ttk_b.Toplevel):
     def savemeasurement(self):    
         
         self.savedata['type'] = 'result'
-        self.savedata['name'] = self.cfgview.measureframe.measname.get()
-        self.savedata['time'] = time.strftime('%y%m%d%H%M%S')
+        self.savedata['name'] = self.vars.get('measname','undefined')
+        self.savedata['time'] = time.strftime('%y%m%d%H%M')
         self.savedata['comment'] = 'testcomment'        
         self.savedata['eutconfig'] = self.cfgview.get_eutconfig()
         self.savedata['ydata'] = self.measurement.ydata
         self.savedata['xdata'] = self.measurement.xdata
         
         fname = self.savedata['time'] + '_' + self.savedata['name'] + '.json'
-        with open(self.workdir / 'resultfile.json', 'w') as fout:
+        with open(Path(self.vars['workdir']) / fname, 'w') as fout:
             fout.write(json.dumps(self.savedata, indent=4))
+
+        return True
+
+    @eventhandler((MSG.CONNECT,))
+    def onevent_connect(self, evt, inst, ip):
         
+        instrumentclass = self.getinstrument(self.vars.get('instrumentname', ''))
+        self.instrument = instrumentclass()
+        if self.instrument.connect(self.tb.ipaddress.get()):                
+            self.tb.setstate(True)
+        else:
+            print('connect failed')
+        return True
+    
+    @eventhandler((MSG.DISCONNECT,))
+    def onevent_disconnect(self, evt):
+        self.instrument.disconnect()
+        self.instrument = None
+        self.tb.setstate(False)
+        return True
+    
+    @eventhandler((MSG.SETMEASTEMPLATE,))
+    def onevent_setmeastemplate(self, evt, name, path):
+        self.mcfgpath = path
+        templ = load_template(path, _TEMPLATETYPE_MEASUREMENT)
+        if templ is not None:
+            self.meastemplate = Measurement.modifytemplate(templ[_TEMPLATE_KEY])                    
+            self.cfgview.updatemeasurementtemplate(self.meastemplate)
+        return True
+    
+    @eventhandler((MSG.SETEUTTEMPLATE,))
+    def onevent_seteuttemplate(self, evt, name, path):
+        self.eutcfgpath = path
+        tmpl = load_template(path, _TEMPLATETYPE_EUT)
+        if tmpl is not None:                    
+            self.cfgview.updateeuttemplate(tmpl[_TEMPLATE_KEY])
+        return True
+    
+    @eventhandler((MSG.SETVAR,))
+    def onevent_setvar(self, evt, varname, value):
+        self.vars[varname] = value
+        print(varname, value)
+        return True
+    
+    @eventhandler((MSG.MEASURE,))
+    def onevent_measure(self, evt, *args):
 
-    def onevent(self, evt):
-
-        print('Event:',evt)
-            
-        match evt:
-            case (MSG.CONNECT,a ,b):
-                self.instrument = DSA832()
-                if self.instrument.connect(self.tb.ipaddress.get()):                
-                    self.tb.setstate(True)
+        match self.measstate:
+            case MeasurementState.DISABLED:
+                pass #this should not be possible
+            case MeasurementState.READY:
+                if self.cfgview.isvalid():
+                    self.measurement = Measurement(self.instrument)
+                    meascfg = (self.cfgview.get_measconfig())
+                    self.savedata['measurementconfig'] = meascfg                            
+                    self.measurement.setconfig(meascfg)                
+                    #self.measurement = Measurement()
+                    #self.measurement.loadconfig(self.mcfgpath)
+                    self.measurement.startmeasurement(msgqueue = self.msgqueue)
+                    self.measstate = MeasurementState.RUNNING                         
                 else:
-                    print('connect failed')
+                    Messagebox.show_error('Some of the values in EUT config or Measurement config\nare invalid', title='Error', alert=True, parent=self)
+            case MeasurementState.DONE:
+                self.measstate = MeasurementState.READY
+                self.savemeasurement()
+        return True
+    
+    @eventhandler((MSG.LOG,))
+    def onevent_log(self, evt, level, msg):
+        match level:
+            case 'debug':
+                logger.debug(msg)
+            case 'info':
+                logger.info(msg)
+            case 'error':
+                logger.error(msg)
 
-            case (MSG.DISCONNECT, a, b):                
-                self.instrument.disconnect()
-                self.instrument = None
-                self.tb.setstate(False)
-
-            case (MSG.SETMEASTEMPLATE, name, path):
-                self.mcfgpath = path
-                templ = load_template(path, _TEMPLATETYPE_MEASUREMENT)
-                if templ is not None:
-                    self.meastemplate = Measurement.modifytemplate(templ[_TEMPLATE_KEY])                    
-                    self.cfgview.updatemeasurementtemplate(self.meastemplate)
-
-            case (MSG.SETEUTTEMPLATE, name, path):
-                self.eutcfgpath = path
-                tmpl = load_template(path, _TEMPLATETYPE_EUT)
-                if tmpl is not None:                    
-                    self.cfgview.updateeuttemplate(tmpl[_TEMPLATE_KEY])
-
-            #case ('newmeasurement',):
-            #    if self.measurement is not None:
-            #        if self.measurement.hasresult and not self.measurement.saved:
-            #            #!!! show warning                        
-
-            case (MSG.MEASURE,): 
-
-                match self.measstate:
-
-                    case MeasurementState.DISABLED:
-                        pass #this should not be possible
-                    case MeasurementState.READY:
-                        if self.cfgview.isvalid():
-                            self.measurement = Measurement(self.instrument)
-                            meascfg = (self.cfgview.get_measconfig())
-                            self.savedata['measurementconfig'] = meascfg                            
-                            self.measurement.setconfig(meascfg)                
-                            #self.measurement = Measurement()
-                            #self.measurement.loadconfig(self.mcfgpath)
-                            self.measurement.startmeasurement(msgqueue = self.msgqueue)
-                            self.measstate = MeasurementState.RUNNING                         
-                        else:
-                            Messagebox.show_error('Some of the values in EUT config or Measurement config\nare invalid', title='Error', alert=True, parent=self)
-                    case MeasurementState.DONE:
-                        self.measstate = MeasurementState.READY
-                        self.savemeasurement()
-                    
-            case (MSG.SETWORKDIR,path):
-                self.workdir = Path(path)
-
-            case (MSG.SETVAR, varname, value):
-                print(varname, value)
-
-            case (MSG.LOG,level,msg):
-                match level:
-                    case 'debug':
-                        logger.debug(msg)
-                    case 'info':
-                        logger.info(msg)
-                    case 'error':
-                        logger.error(msg)
-            
-            case (MSG.THREAD, type, data):
-                self.processthreadmsg(type, data)
-
-
-        return True         #returns True to enable onevent calls by Entry.validatecommand
-
-        '''if e[0] == 'connect':
-            self.instrument = DSA832()
-            if self.instrument.connect(self.tb.ipaddress.get()):                
-                self.tb.setstate(True)
-            
-        elif e[0] == 'disconnect':
-            self.instrument = None
-            self.instrument.disconnect()
-            self.tb.setstate(False)
-        print(e)
-        '''
+    @eventhandler((MSG.THREAD,))
+    def onevent_threadmsg(self, evt, msgtype, data):
+        self.processthreadmsg(msgtype, data)
+        return True        
     
     def processthreadmsg(self, type, data=None):
         if type == THREADMSG.DATA:

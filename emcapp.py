@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from miscgui import *
+from resultbrowser import *
 
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
@@ -27,15 +28,10 @@ def exitapp():
 
 
 # Generate GUI window
-window = ttk_b.Window(themename = theme["default"])
+
+window = MeasureWindow(themename = theme["default"])
 # Make the window resizable
 window.resizable(1,1)
-# Modify window for measure session
 rbrowser = ResultBrowser()
-measwnd = MeasureWindow()
-rbrowser.protocol("WM_DELETE_WINDOW",rbrowser.destroy)
-#plot_session(window)
-# Install window close routine
-window.protocol("WM_DELETE_WINDOW",exitapp)
-# Run mainloop
+window.protocol("WM_DELETE_WINDOW",exitapp)         # Install window close routine
 window.mainloop()
