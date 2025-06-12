@@ -34,4 +34,16 @@ window = MeasureWindow(themename = theme["default"])
 window.resizable(1,1)
 rbrowser = ResultBrowser()
 window.protocol("WM_DELETE_WINDOW",exitapp)         # Install window close routine
+
+
+print("╔═════════════════════════════════════╗")
+print("║     ███████╗███╗   ███╗ ██████╗     ║")
+print("║     ██╔════╝████╗ ████║██╔════╝     ║")
+print("║     █████╗  ██╔████╔██║██║          ║")
+print("║     ██╔══╝  ██║╚██╔╝██║██║          ║")
+print("║     ███████╗██║ ╚═╝ ██║╚██████╗     ║")
+print("║     ╚══════╝╚═╝     ╚═╝ ╚═════╝     ║")
+print("║       ── mEMC Control Suite ──      ║")
+print("╚═════════════════════════════════════╝")
+
 window.mainloop()
