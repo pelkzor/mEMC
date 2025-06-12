@@ -67,8 +67,10 @@ def load_instruments():
                 ilist.append((name, inst))
         except Exception as e:
             print(fname, f'failed to load because: {e}')
-    for loadedModule in ilist:
-        print(loadedModule)
+    #extract loaded instrument names and display in terminal
+    names = [name for name, _ in ilist]
+    result = "Loaded instruments: " +", ".join(names)
+    print(result)
     return ilist
 
 def get_measurementconfigs():
