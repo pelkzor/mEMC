@@ -15,7 +15,7 @@ from matplotlib import ticker
 import mplcursors
 from matplotlib.backend_bases import key_press_handler
 
-from measurement import Measurement
+from instruments import measurement
 #from DSA832_instrument import DSA832
 #from simulator_instrument import Simulator
 from secrets import token_hex
@@ -23,27 +23,24 @@ import json
 import time
 
 from enum import IntEnum, auto
-from message import *
+from utils.message import *
 import queue
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.ERROR)
 logger.error('Starting')
 
-
-
 _UNDEFINED_ENTRY = 'NA'
 
 _DEFAULT_PAD = 5
 
-_MEASUREMENT_PATH = './meastempl'
-_EUT_PATH = './euttempl'
-_CORRECTION_PATH = './correction'
+_MEASUREMENT_PATH = './config/meastempl'
+_EUT_PATH = './config//euttempl'
+_CORRECTION_PATH = './config//correction'
 
 _TEMPLATETYPE_MEASUREMENT = 'measurementtemplate'
 _TEMPLATETYPE_EUT = 'euttemplate'
 _TEMPLATE_KEY = 'template'
-
 
 import sys
 import importlib.util
@@ -60,11 +57,18 @@ def load_module(source, module_name):
 def load_instruments():
     ilist = []
     filenames = list(Path('./instruments').glob('*.py'))
+    import inspect
     for fname in filenames:
-        mod = load_module(fname, token_hex(16))
-        inst = mod.Instrument
-        name = inst.name
-        ilist.append((name, inst))
+        try:
+            mod = load_module(fname, token_hex(16))
+            if hasattr(mod, "Instrument"):
+                inst = mod.Instrument
+                name = inst.name
+                ilist.append((name, inst))
+        except Exception as e:
+            print(fname, f'failed to load because: {e}')
+    for loadedModule in ilist:
+        print(loadedModule)
     return ilist
 
 def get_measurementconfigs():

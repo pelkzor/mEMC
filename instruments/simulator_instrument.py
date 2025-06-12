@@ -6,8 +6,8 @@ import queue
 
 # FOR DEBUGGING ONLY (Allows for breakpoints in the debugger)
 #import pdb;
-from message import *
-from instrument_abstract import InstrumentBase
+from utils import message
+from instruments.instrument_abstract import InstrumentBase
 
 '''
 Desc: Stores configuration information / methods

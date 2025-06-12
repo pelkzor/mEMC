@@ -6,7 +6,6 @@ Desc: Abstract class used to ensure any instrument classes being
 used stick to a specific format used by the measurement class
 '''
 class InstrumentBase():
-
     # Initialise communication 
     # Read data from cmd's file
     def __init__(self):

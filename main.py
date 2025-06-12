@@ -9,8 +9,9 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
-from miscgui import *
-from resultbrowser import *
+from gui import *
+# from miscgui import *
+# from resultbrowser import *
 
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
@@ -28,7 +29,6 @@ def exitapp():
 
 
 # Generate GUI window
-
 window = MeasureWindow(themename = theme["default"])
 # Make the window resizable
 window.resizable(1,1)

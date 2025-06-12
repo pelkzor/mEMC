@@ -2,8 +2,8 @@ from threading import Thread
 import queue
 import time
 
-from instrument_abstract import InstrumentBase
-from message import *
+from instruments.DSA832_instrument import InstrumentBase
+from utils import message
 
 
 class Measurement():
