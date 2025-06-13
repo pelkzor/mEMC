@@ -10,9 +10,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from gui import *
-# from miscgui import *
-# from resultbrowser import *
-
 
 # Dictionary of possible themes (Refer to ttkbootstrap manpage)
 theme = {                
@@ -20,6 +17,17 @@ theme = {
     "dark"      : "darkly",
     "light"     : "journal"
 }
+
+def printWelcomeScreen():
+    print("╔═════════════════════════════════════╗")
+    print("║     ███████╗███╗   ███╗ ██████╗     ║")
+    print("║     ██╔════╝████╗ ████║██╔════╝     ║")
+    print("║     █████╗  ██╔████╔██║██║          ║")
+    print("║     ██╔══╝  ██║╚██╔╝██║██║          ║")
+    print("║     ███████╗██║ ╚═╝ ██║╚██████╗     ║")
+    print("║     ╚══════╝╚═╝     ╚═╝ ╚═════╝     ║")
+    print("║        ── mEMC Test Suite ──        ║")
+    print("╚═════════════════════════════════════╝")
 
 def exitapp():
     plt.cla()
@@ -35,15 +43,5 @@ window.resizable(1,1)
 rbrowser = ResultBrowser()
 window.protocol("WM_DELETE_WINDOW",exitapp)         # Install window close routine
 
-
-print("╔═════════════════════════════════════╗")
-print("║     ███████╗███╗   ███╗ ██████╗     ║")
-print("║     ██╔════╝████╗ ████║██╔════╝     ║")
-print("║     █████╗  ██╔████╔██║██║          ║")
-print("║     ██╔══╝  ██║╚██╔╝██║██║          ║")
-print("║     ███████╗██║ ╚═╝ ██║╚██████╗     ║")
-print("║     ╚══════╝╚═╝     ╚═╝ ╚═════╝     ║")
-print("║       ── mEMC Control Suite ──      ║")
-print("╚═════════════════════════════════════╝")
-
+printWelcomeScreen()
 window.mainloop()
