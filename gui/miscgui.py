@@ -564,6 +564,7 @@ class PlotFrame(ttk_b.Frame):
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         #self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=4, sticky='NSEW')
         self.canvas.get_tk_widget().pack(expand=True, fill='both')
+
         toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False)
         toolbar.update()
         #toolbar.grid(row=1, column=0, columnspan=4, sticky='NSEW')
@@ -836,12 +837,13 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
 
         self.plotframe = PlotFrame(self)
-        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2, sticky='NSEW')        
+        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2, sticky='NSEW')
 
-        self.cfgview = ConfigView(self)
+        self.cfgview = ConfigView(self) 
         self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')        
         #self.rowconfigure(3, weight=1)
-        self.after(500, self.ontimer)        
+        self.after(500, self.ontimer)
+        
 
     def getinstrument(self, name):        
         try:

@@ -26,7 +26,7 @@ def printWelcomeScreen():
     print("║     ██╔══╝  ██║╚██╔╝██║██║          ║")
     print("║     ███████╗██║ ╚═╝ ██║╚██████╗     ║")
     print("║     ╚══════╝╚═╝     ╚═╝ ╚═════╝     ║")
-    print("║        ── mEMC Test Suite ──        ║")
+    print("║     ── mEMC Test Application ──     ║")
     print("╚═════════════════════════════════════╝")
 
 def exitapp():
@@ -38,9 +38,27 @@ def exitapp():
 
 # Generate GUI window
 window = MeasureWindow(themename = theme["default"])
+
+
+window.title('mEMC Test')
+screen_width = window.winfo_screenwidth()
+screen_height = window.winfo_screenheight()
+desired_width = 1920
+desired_height = 1080
+
+window_width = min(desired_width, screen_width)
+window_height = min(desired_height, screen_height)
+
+# Center the window
+x = (screen_width - window_width) // 2
+y = (screen_height - window_height) // 2
+
+window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+#window.attributes("-fullscreen", True)
 # Make the window resizable
 window.resizable(1,1)
 rbrowser = ResultBrowser()
+rbrowser.title("mEMC Results")
 window.protocol("WM_DELETE_WINDOW",exitapp)         # Install window close routine
 
 printWelcomeScreen()
