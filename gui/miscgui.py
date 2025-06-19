@@ -809,13 +809,13 @@ class MeasureFrame(ttk_b.Frame):
     def updatestate(self, state: MeasurementState):
         match state:
             case MeasurementState.DISABLED:                
-                self.measurebtn.config(text='Start Measurment', state='disabled')
+                self.measurebtn.config(text='Start Measurement', state='disabled')
             case MeasurementState.READY:
-                self.measurebtn.config(text='Start Measurment', state='enabled')
+                self.measurebtn.config(text='Start Measurement', state='enabled')
             case MeasurementState.RUNNING:
-                self.measurebtn.config(text='Stop Measurment')
+                self.measurebtn.config(text='Stop Measurement')
             case MeasurementState.DONE:
-                self.measurebtn.config(text='Save Measurment')
+                self.measurebtn.config(text='Save Measurement')
 
 class _MatchBreak(Exception): pass
 
