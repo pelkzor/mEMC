@@ -30,3 +30,10 @@ With the packages installed and the environment variable(s) set up, run:
 # From root/
 python -m main
 ```
+
+## Continous development
+If more packages are installed during development, `requires.txt` needs to be updated. Run the command below to update the file:
+
+```bash
+pip freeze > requires.txt
+```
