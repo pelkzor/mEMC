@@ -15,7 +15,11 @@ from matplotlib import ticker
 import mplcursors
 from matplotlib.backend_bases import key_press_handler
 
+
 from instruments import measurement
+import os
+from dotenv import load_dotenv
+from instruments.measurement import Measurement
 #from DSA832_instrument import DSA832
 #from simulator_instrument import Simulator
 from secrets import token_hex
@@ -29,6 +33,10 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.ERROR)
 logger.error('Starting')
+
+
+load_dotenv()
+LOCAL_IP = os.getenv("IP_ADDRESS")
 
 _UNDEFINED_ENTRY = 'NA'
 
@@ -197,7 +205,7 @@ class ValueField(DefaultGridField):
             tip = tip + 'Value is set to "read only" '
         if self.allowundefined:
             tip = tip + '\n' if len(tip) else tip
-            tip = tip + 'Value is allowd to be empty "NA"'
+            tip = tip + 'Value is allowed to be empty "NA"'
 
         if value is None:
             self.sval.set(_UNDEFINED_ENTRY)    
@@ -460,7 +468,7 @@ class TreeFrame(ttk_b.Frame):
 
 class ToolBar(ttk_b.Frame):
 
-    def __init__(self, parent, defaultipaddress='192.168.1.70', ilist=None, defaultinstrument=None):
+    def __init__(self, parent, defaultipaddress=LOCAL_IP, ilist=None, defaultinstrument=None):
         super().__init__(parent)        
         self.isconnected = False
         self.parent = parent
@@ -501,8 +509,11 @@ class ToolBar(ttk_b.Frame):
         self.eutcfgselect.grid(row=0, column=5, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
         ttk_b.Label(self, text='Working directory',width=25, anchor='e').grid(row=1, column=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
-        self.workdir = ttk_b.StringVar()        
-        self.workdirentry = ttk_b.Entry(self, textvariable=self.workdir, state='readonly', width=32)
+        self.workdir = ttk_b.StringVar()
+        style = ttk_b.Style()
+        style.configure('Placeholder.TEntry', foreground='grey')
+        self.workdir.set("Select work directory...")          
+        self.workdirentry = ttk_b.Entry(self, textvariable=self.workdir, state='readonly', width=32, style='Placeholder.TEntry')
         self.workdirentry.bind('<1>', self.selectworkdir)
         self.workdirentry.grid(row=1, column=3, columnspan=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
@@ -520,6 +531,7 @@ class ToolBar(ttk_b.Frame):
         
         if len(workdir):
             self.workdir.set(workdir)
+            self.workdirentry.configure(style='TEntry')
             print('workdir set to', workdir)
             self.parent.onevent((MSG.SETVAR,'workdir',workdir))
 
@@ -833,7 +845,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
 
-        self.tb = ToolBar(self,'192.168.1.70', ilist = self.instrumentlist)
+        self.tb = ToolBar(self, LOCAL_IP, ilist = self.instrumentlist)
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
 
         self.plotframe = PlotFrame(self)

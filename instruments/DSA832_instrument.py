@@ -4,8 +4,13 @@ from io import BytesIO
 
 # FOR DEBUGGING ONLY (Allows for breakpoints in the debugger)
 #import pdb;
+
 from utils import message
 from instruments.instrument_abstract import InstrumentBase
+from utils.message import *
+from instrument_abstract import InstrumentBase
+from gui.miscgui import LOCAL_IP
+
 
 '''
 Desc: Stores configuration information / methods
@@ -55,7 +60,7 @@ class Instrument(InstrumentBase):
             return True
         return False
         
-    def connect(self, ip = '192.168.1.70', port=5555):               
+    def connect(self, ip = LOCAL_IP, port=5555):               
         try:
             self.sock.settimeout(5)
             self.sock.connect((ip, port))
