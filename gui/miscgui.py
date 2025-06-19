@@ -560,20 +560,20 @@ class PlotFrame(ttk_b.Frame):
         self.point = None
         self.measurement = None
         self.peaklist = []                      
-        self.fig = plt.Figure(figsize=(14, 7), dpi=100)
-        self.ax = self.fig.add_subplot()
+        self.fig = plt.Figure(figsize=(5, 7), dpi=100)
+        self.fig = plt.Figure()
 
+        self.ax = self.fig.add_subplot()
         # Create a Matplotlib figure and plot        
         log = True
         if log:
             self.ax.set_xscale("log")       
-        
         # Create a canvas and add the figure to it
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         #self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=4, sticky='NSEW')
-        self.canvas.get_tk_widget().pack(expand=True, fill='both')
+        self.canvas.get_tk_widget().pack(fill='x', expand=True) 
 
-        toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False)
+        toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=True)
         toolbar.update()
         #toolbar.grid(row=1, column=0, columnspan=4, sticky='NSEW')
         toolbar.pack(expand=True, fill='x')
@@ -597,6 +597,8 @@ class PlotFrame(ttk_b.Frame):
         self.btnaddpoint = ttk_b.Button(self.pointframe, text='Add', command=self.onaddpoint)
         self.btnaddpoint.pack(side='left')
         #self.pointframe.grid(row=2, column=0)
+        self.btnmeasureqp = ttk_b.Button(self.pointframe, text='Measure selected QP', command=self.measureqp)
+        self.btnmeasureqp.pack(side='left', padx=10)
         self.pointframe.pack(expand=True, fill='x')
 
         self.tvframe = ttk_b.Frame(self)
@@ -617,9 +619,6 @@ class PlotFrame(ttk_b.Frame):
         self.treeview.config(yscrollcommand=self.tvscroll.set)
         #self.tvframe.grid(row=3, column=0, columnspan=4, sticky='NSEW')
         self.tvframe.pack(expand=True, fill='both')
-
-        self.btnmeasureqp = ttk_b.Button(self, text='Measure selected QP', command=self.measureqp)
-        self.btnmeasureqp.pack()
 
         #for i in range(10):           
         #    tvi = self.treeview.insert('',ttk_b.END, iid=i, values=('abc','345','ert'))
@@ -839,13 +838,13 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.columnconfigure(2,weight=1)
         self.columnconfigure(3,weight=1)
         self.rowconfigure(1, weight=1)
-        self.rowconfigure(2, weight=1)
+        self.rowconfigure(2, weight=2)
 
         self.tb = ToolBar(self, LOCAL_IP, ilist = self.instrumentlist)
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
 
         self.plotframe = PlotFrame(self)
-        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2, sticky='NSEW')
+        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2,sticky='NSEW')
 
         self.cfgview = ConfigView(self) 
         self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')        

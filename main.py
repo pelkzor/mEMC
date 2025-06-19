@@ -48,12 +48,15 @@ desired_height = 1080
 window_width = min(desired_width, screen_width)
 window_height = min(desired_height, screen_height)
 
-# Center the window
+# # Center the window
 x = (screen_width - window_width) // 2
 y = (screen_height - window_height) // 2
 
 window.geometry(f"{window_width}x{window_height}+{x}+{y}")
-#window.attributes("-fullscreen", True)
+
+
+#getting screen width and height of display
+
 # Make the window resizable
 window.resizable(1,1)
 rbrowser = ResultBrowser()
