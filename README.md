@@ -31,7 +31,7 @@ With the packages installed and the environment variable(s) set up, run:
 python -m main
 ```
 
-## Continous development
+## Continuous development
 If more packages are installed during development, `requires.txt` needs to be updated. Run the command below to update the file:
 
 ```bash
