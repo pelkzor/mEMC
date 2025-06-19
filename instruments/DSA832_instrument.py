@@ -6,10 +6,9 @@ from io import BytesIO
 #import pdb;
 
 from utils import message
-from instruments.instrument_abstract import InstrumentBase
 from utils.message import *
-from instrument_abstract import InstrumentBase
-from gui.miscgui import LOCAL_IP
+from instruments.instrument_abstract import InstrumentBase
+from config import LOCAL_IP
 
 
 '''

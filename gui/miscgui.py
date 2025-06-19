@@ -15,10 +15,9 @@ from matplotlib import ticker
 import mplcursors
 from matplotlib.backend_bases import key_press_handler
 
+from config import LOCAL_IP
 
 from instruments import measurement
-import os
-from dotenv import load_dotenv
 from instruments.measurement import Measurement
 #from DSA832_instrument import DSA832
 #from simulator_instrument import Simulator
@@ -30,13 +29,10 @@ from enum import IntEnum, auto
 from utils.message import *
 import queue
 import logging
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.ERROR)
 logger.error('Starting')
-
-
-load_dotenv()
-LOCAL_IP = os.getenv("IP_ADDRESS")
 
 _UNDEFINED_ENTRY = 'NA'
 
