@@ -437,8 +437,6 @@ class TreeFrame(ttk_b.Frame):
 
     def __init__(self, parent):
         super().__init__(parent)
-        #self.l1 = ttk_b.Label(self, text = 'testlabel')
-        #self.l1.pack()
         self.treeview = ttk.Treeview(self,columns=('Name','Time','Type','Comment'))
         
         self.treeview.column('#0',anchor='center')
@@ -570,60 +568,56 @@ class PlotFrame(ttk_b.Frame):
         
         # Create a canvas and add the figure to it
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
-        #self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=4, sticky='NSEW')
-        self.canvas.get_tk_widget().pack(expand=True, fill='both')
-
+        
         toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False)
         toolbar.update()
-        #toolbar.grid(row=1, column=0, columnspan=4, sticky='NSEW')
-        toolbar.pack(expand=True, fill='x')
         self.canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
         self.canvas.mpl_connect("button_press_event", lambda event: print(f"{event}"))
-        #self.canvas.mpl_connect("key_press_event", key_press_handler)
-        #self.columnconfigure(0, weight=1)
-        #self.rowconfigure(0, weight=1)
 
-        '''self.testentry = ttk_b.Entry(self)
-        self.testentry.grid(row=3,column=0)
-        self.btn = ttk_b.Button(self, text='test', command=self.btnevent)
-        self.btn.grid(row=4,column=0)
-        '''
         self.pointframe = ttk_b.Frame(self)
-        ttk_b.Label(self.pointframe, text='Add point',width=16, anchor='w').pack(side='left')
+        ttk_b.Label(self.pointframe, text='Add point', width=16, anchor='w').pack(side='left')
         self.pointentryf = ttk_b.Entry(self.pointframe, state='readonly')
         self.pointentryf.pack(side='left')
         self.pointentrys = ttk_b.Entry(self.pointframe, state='readonly')
         self.pointentrys.pack(side='left')
         self.btnaddpoint = ttk_b.Button(self.pointframe, text='Add', command=self.onaddpoint)
         self.btnaddpoint.pack(side='left')
-        #self.pointframe.grid(row=2, column=0)
-        self.pointframe.pack(expand=True, fill='x')
 
         self.tvframe = ttk_b.Frame(self)
-        self.treeview = ttk_b.Treeview(self.tvframe,columns=('freq','qp','limit','margin'), selectmode=ttk_b.BROWSE)
-        self.treeview.pack(side='left')
-        self.treeview.column('#0',width=0, stretch='no', anchor='center')
-        self.treeview.column('freq',anchor='center')
-        self.treeview.column('qp',anchor='center')
-        self.treeview.column('limit',anchor='center')
-        self.treeview.column('margin',anchor='center')
-        #self.treeview.heading('#0', text='File')
-        self.treeview.heading('freq',text='Frequency [MHz]')
-        self.treeview.heading('qp',text='QP')
-        self.treeview.heading('limit',text='Limit')
-        self.treeview.heading('margin',text='Margin')
+        self.treeview = ttk_b.Treeview(self.tvframe, columns=('freq','qp','limit','margin'), selectmode=ttk_b.BROWSE)
+        self.treeview.pack(side='left', fill='both', expand=True)
+        self.treeview.column('#0', width=0, stretch='no', anchor='center')
+        self.treeview.column('freq', anchor='center')
+        self.treeview.column('qp', anchor='center')
+        self.treeview.column('limit', anchor='center')
+        self.treeview.column('margin', anchor='center')
+        self.treeview.heading('freq', text='Frequency [MHz]')
+        self.treeview.heading('qp', text='QP')
+        self.treeview.heading('limit', text='Limit')
+        self.treeview.heading('margin', text='Margin')
         self.tvscroll = ttk.Scrollbar(self.tvframe, orient='vertical', command=self.treeview.yview)
-        self.tvscroll.pack(side='left',fill='y')
+        self.tvscroll.pack(side='left', fill='y')
         self.treeview.config(yscrollcommand=self.tvscroll.set)
-        #self.tvframe.grid(row=3, column=0, columnspan=4, sticky='NSEW')
-        self.tvframe.pack(expand=True, fill='both')
 
-        self.btnmeasureqp = ttk_b.Button(self, text='Measure selected QP', command=self.measureqp)
-        self.btnmeasureqp.pack()
+        self.btnmeasureqp = ttk_b.Button(self, text='Measure selected QP', command=self.measureqp, width=20)
 
-        #for i in range(10):           
-        #    tvi = self.treeview.insert('',ttk_b.END, iid=i, values=('abc','345','ert'))
-        #    print(tvi, type(tvi))
+        # Grid layout, more weight = more space in height
+        self.grid_rowconfigure(0, weight=3)  # Canvas gets most space
+        self.grid_rowconfigure(1, weight=0)   # Toolbar
+        self.grid_rowconfigure(2, weight=0)   # Point frame
+        self.grid_rowconfigure(3, weight=1)   # Treeview gets remaining space
+        self.grid_rowconfigure(4, weight=0)   # Button
+        self.grid_columnconfigure(0, weight=1)  # Single column that expands
+
+        # Place widgets in grid
+        self.canvas.get_tk_widget().grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+        toolbar.grid(row=1, column=0, sticky='ew', padx=5)
+        self.pointframe.grid(row=2, column=0, sticky='ew', padx=5, pady=5)
+        self.tvframe.grid(row=3, column=0, sticky='w', padx=5, pady=5)
+        self.btnmeasureqp.grid(row=4, column=0, padx=5, pady=5, sticky='w')
+
+        # Minimum sizes to prevent widgets from becoming too small
+        self.tvframe.config(width=400, height=200)
 
     def getpeak(self, iid):
         for p in self.peaklist:
