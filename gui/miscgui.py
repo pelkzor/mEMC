@@ -536,7 +536,7 @@ class ToolBar(ttk_b.Frame):
         self.btnconnect.config(text = 'Disconnect' if connstate else 'Connect')
 
         if connstate:
-            self.ipaddressentry.config(state='disable')
+            self.ipaddressentry.config(state='disabled')
             self.instrumentselect.config(state='disabled')
         else:
             self.ipaddressentry.config(state='normal')
@@ -835,7 +835,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=1)
 
-        self.tb = ToolBar(self, LOCAL_IP, ilist = self.instrumentlist)
+        self.tb = ToolBar(self, defaultipaddress=LOCAL_IP, ilist = self.instrumentlist)
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
 
         self.plotframe = PlotFrame(self)
@@ -907,8 +907,9 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         
         instrumentclass = self.getinstrument(self.vars.get('instrumentname', ''))
         self.instrument = instrumentclass()
-        if self.instrument.connect(self.tb.ipaddress.get()):                
+        if self.instrument.connect(self.tb.ipaddressvar.get()):                
             self.tb.setstate(True)
+            print('connect succesful')
         else:
             print('connect failed')
         return True
@@ -964,6 +965,8 @@ class MeasureWindow(ttk_b.Window, EventHandler):
             case MeasurementState.DONE:
                 self.measstate = MeasurementState.READY
                 self.savemeasurement()
+                if hasattr(self, 'result_browser'):
+                    self.result_browser.refresh_results()
         return True
     
     @eventhandler((MSG.LOG,))

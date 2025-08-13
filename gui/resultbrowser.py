@@ -12,10 +12,10 @@ class ResultTable(ttk_b.Frame):
         self.results = {}
 
         coldata = [
-            {'text': 'Time', 'width': 40},
+            {'text': 'Time', "width": 100},
             {"text": "Name", "stretch": False},
-            "EUT Cfg",
-            {"text": "Meas Cfg", "stretch": False},
+            "EUT Configuration",
+            {"text": "Start Frequency", "stretch": False},
         ]        
 
         self.table = Tableview(self, coldata=coldata, paginated=False, searchable=True, bootstyle=PRIMARY)#, stripecolor=(colors.light, None))
@@ -30,26 +30,39 @@ class ResultTable(ttk_b.Frame):
     def on_dclick(self, evt):
         rowid = self.table.view.identify_row(evt.y)
         row = self.table.get_row(iid=rowid)
-        if row.values[0] == 'X':
-            row.values[0] = ''
-        else:
-            row.values[0] = 'X'
-        row.refresh()
         print(row.values)
+    
+    def delete_rows(self):
+        rows = self.table.get_rows()
+        for i in reversed(range(len(rows))):
+            try:
+                self.table.delete_row(i)
+            except:
+                continue
 
     def loadfiles(self):
-        filenames = list(Path('.').glob('*.json'))
+        filenames = list(Path('results').glob('*.json'))
         rows = []
         for name in filenames:
             print(name)
             with open(name, 'r') as f:
-                result = json.loads(f.read())                   #!!!note: should probably drop data to reduce memory usage
+                result = json.loads(f.read())
                 self.results[result['time']] = result
-                rows.append([result['time'],result['name'], result['comment'], 'None'])
-        self.table.insert_rows('end',rows)
+                
+                # Format time display
+                original_time = result['time']
+                if len(original_time) == 10:
+                    date_part = original_time[:6]
+                    time_part = original_time[6:]
+                    formatted_time = f"{date_part} {time_part[:2]}:{time_part[2:]}"  # YYMMDD HH:MM
+                else:
+                    formatted_time = original_time  # Fallback
+                
+                rows.append([formatted_time, result['name'], result['eutconfig']['EUT Name'], result['measurementconfig']['fstart']])
+        
+        self.table.insert_rows('end', rows)
         self.table.load_table_data()
         print('done')
-           
 class ResultBrowser(ttk_b.Toplevel):    
 
     def __init__(self):
@@ -58,7 +71,11 @@ class ResultBrowser(ttk_b.Toplevel):
         #self.tv.pack()
         self.table = ResultTable(self)
         self.table.pack()
-        #self.table.loadfiles()               
+        self.table.loadfiles()
+
+    def refresh_results(self):
+        self.table.delete_rows()
+        self.table.loadfiles()         
 
     
 

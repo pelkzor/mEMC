@@ -3,7 +3,7 @@ import queue
 import time
 
 from instruments.DSA832_instrument import InstrumentBase
-from utils import message
+from utils.message import MSG, THREADMSG 
 
 
 class Measurement():
