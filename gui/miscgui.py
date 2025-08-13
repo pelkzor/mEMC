@@ -558,14 +558,14 @@ class PlotFrame(ttk_b.Frame):
         self.point = None
         self.measurement = None
         self.peaklist = []                      
-        self.fig = plt.Figure(figsize=(14, 7), dpi=100)
-        self.ax = self.fig.add_subplot()
+        self.fig = plt.Figure(figsize=(5, 7), dpi=100)
+        self.fig = plt.Figure()
 
+        self.ax = self.fig.add_subplot()
         # Create a Matplotlib figure and plot        
         log = True
         if log:
             self.ax.set_xscale("log")       
-        
         # Create a canvas and add the figure to it
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         
@@ -833,13 +833,13 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.columnconfigure(2,weight=1)
         self.columnconfigure(3,weight=1)
         self.rowconfigure(1, weight=1)
-        self.rowconfigure(2, weight=1)
+        self.rowconfigure(2, weight=2)
 
         self.tb = ToolBar(self, defaultipaddress=LOCAL_IP, ilist = self.instrumentlist)
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
 
         self.plotframe = PlotFrame(self)
-        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2, sticky='NSEW')
+        self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2,sticky='NSEW')
 
         self.cfgview = ConfigView(self) 
         self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')        
