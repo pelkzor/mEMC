@@ -54,13 +54,13 @@ y = (screen_height - window_height) // 2
 
 window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-
 #getting screen width and height of display
 
 # Make the window resizable
 window.resizable(1,1)
 rbrowser = ResultBrowser()
 rbrowser.title("mEMC Results")
+window.result_browser = rbrowser 
 window.protocol("WM_DELETE_WINDOW",exitapp)         # Install window close routine
 
 printWelcomeScreen()

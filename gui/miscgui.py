@@ -965,8 +965,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
             case MeasurementState.DONE:
                 self.measstate = MeasurementState.READY
                 self.savemeasurement()
-                if hasattr(self, 'result_browser'):
-                    self.result_browser.refresh_results()
+                self.result_browser.refresh_results()
         return True
     
     @eventhandler((MSG.LOG,))

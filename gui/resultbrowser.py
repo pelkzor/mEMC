@@ -75,7 +75,7 @@ class ResultBrowser(ttk_b.Toplevel):
 
     def refresh_results(self):
         self.table.delete_rows()
-        self.table.loadfiles()         
+        self.table.loadfiles()        
 
     
 
