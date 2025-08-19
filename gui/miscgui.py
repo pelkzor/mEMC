@@ -890,8 +890,6 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.after(500, self.ontimer)
 
 
-
-
     def getinstrument(self, name):        
         try:
             index = [i[0] for i in self.instrumentlist].index(name)
