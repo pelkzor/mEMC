@@ -21,6 +21,8 @@ For the application to work properly regardless of where it is ran from, environ
 ```bash
 # In .env
 IP_ADDRESS=IP_OF_LOCAL_MACHINE
+#To preselect all comboboxes and the simulator instrument on start for quicker debug cycles
+SIMULATOR_MODE=TRUE
 ```
 
 ## Usage

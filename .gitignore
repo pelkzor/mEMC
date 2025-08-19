@@ -6,3 +6,5 @@ results/
 emc.log
 .env
 .venv
+.vscode
+simulator
