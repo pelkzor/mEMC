@@ -1,4 +1,5 @@
 from threading import Thread
+import json
 import queue
 import time
 
@@ -110,8 +111,6 @@ class Measurement():
             self.instrument.set('tracemode', self.meascfg['tracemode'])
             sweeptime = self.instrument.get('sweeptime')
             self.instrument.set('initiate',1)
-            #print('st = ', sweeptime)
-            #print ('waiting ', sweeptime * self.meascfg['sweepcount'] + 1, 's')
             time.sleep(sweeptime * self.meascfg['sweepcount'] + 1)
             while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
                 self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
@@ -175,7 +174,10 @@ class Measurement():
 
     def loadcorrection(self, file):
         with open(file, 'r') as f:
-            self.fclist = [tuple(x.split(',')) for x in f.read().split('\n')] 
+            data = json.load(f)
+            self.fclist = list(zip(data["correction"]["frequency"], data["correction"]["level"]))
+        # with open(file, 'r') as f:
+        #     self.fclist = [tuple(x.split(',')) for x in f.read().split('\n')] 
 
 class EUTSetup:
     def __init__(self):

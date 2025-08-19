@@ -29,6 +29,7 @@ from enum import IntEnum, auto
 from utils.message import *
 import queue
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.ERROR)
@@ -45,6 +46,10 @@ _CORRECTION_PATH = './config//correction'
 _TEMPLATETYPE_MEASUREMENT = 'measurementtemplate'
 _TEMPLATETYPE_EUT = 'euttemplate'
 _TEMPLATE_KEY = 'template'
+
+#Set to true for quicker debug cycles
+#Preselects all dropdowns
+SIMULATOR_MODE = os.environ.get('SIMULATOR_MODE', 'False') == 'True'
 
 import sys
 import importlib.util
@@ -473,7 +478,6 @@ class ToolBar(ttk_b.Frame):
         
         self.instrumentvar.trace_add('write', lambda *_: parent.onevent((MSG.SETVAR,'instrumentname',self.instrumentvar.get()))) 
         self.instrumentselect = ttk_b.Combobox(self, values=[i[0] for i in ilist], textvariable=self.instrumentvar, state='readonly', width=32)        
-        #self.instrumentselect.bind("<<ComboboxSelected>>", lambda: parent.onevent((MSG.SETVAR,'instrumentname',self.instrumentvar.get())))
         self.instrumentselect.grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW') 
 
         ttk_b.Label(self, text='IP address [:port]',width=25, anchor='e').grid(row=1, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
@@ -487,20 +491,19 @@ class ToolBar(ttk_b.Frame):
         self.btnconnect = ttk_b.Button(self, text='Connect', command = lambda : parent.onevent((MSG.DISCONNECT if self.isconnected else MSG.CONNECT,self.instrumentvar.get(),self.ipaddressvar.get())))
         self.btnconnect.grid(row=2, column=0, columnspan=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='NSEW')
 
-        #self.btnmeasure = ttk_b.Button(self, text='Measure', command = lambda : parent.onevent((MSG.MEASURE,)))
-        #self.btnmeasure.grid(row=2, column=2, columnspan=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
-
         ttk_b.Label(self, text='Measurement template',width=25, anchor='e').grid(row=0, column=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.mcfg = ttk_b.StringVar()
         self.mcfgselect = ttk_b.Combobox(self, textvariable=self.mcfg, state='readonly', width=32)
         self.mcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETMEASTEMPLATE,self.mcfg.get(),self.mconfigs[self.mcfg.get()])) )
         self.mcfgselect.grid(row=0, column=3, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
+
         ttk_b.Label(self, text='EUT Template',width=25, anchor='e').grid(row=0, column=4, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.eutcfg = ttk_b.StringVar()
         self.eutcfgselect = ttk_b.Combobox(self, textvariable=self.eutcfg, state='readonly', width=32)
         self.eutcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETEUTTEMPLATE,self.eutcfg.get(),self.eutconfigs[self.eutcfg.get()])) )
         self.eutcfgselect.grid(row=0, column=5, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
+
 
         ttk_b.Label(self, text='Working directory',width=25, anchor='e').grid(row=1, column=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.workdir = ttk_b.StringVar()
@@ -512,6 +515,39 @@ class ToolBar(ttk_b.Frame):
         self.workdirentry.grid(row=1, column=3, columnspan=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
         self.loadtemplates()
+
+        if SIMULATOR_MODE:
+            # select simulator instrument
+            if len(ilist) > 0:
+                sim_names = [i[0] for i in ilist if 'simulator' in i[0].lower()]
+                if sim_names:
+                    sim_index = [i[0].lower() for i in ilist].index(sim_names[0].lower())
+                    self.instrumentselect.current = sim_index
+                    self.instrumentvar.set(ilist[sim_index][0])
+                else:
+                    self.instrumentselect.current = 0
+                    self.instrumentvar.set(ilist[0][0])
+
+            # autoset mcfgselect
+            if len(self.mcfgselect['values']) > 0:
+                self.mcfgselect.current = 0
+                if self.mcfgselect['values']:
+                    self.mcfg.set(self.mcfgselect['values'][0])
+                    
+            # autoset eutconfig
+            if  len(self.eutconfigs) > 0:
+                self.eutcfgselect.current = 0
+                if self.eutcfgselect['values']:
+                    self.eutcfgselect.set(self.eutcfgselect['values'][0])
+            
+            # simulator work directory
+            # Set working directory to script root folder/simulator
+            script_root = os.path.dirname(os.path.abspath(__file__))
+            sim_dir = os.path.join(script_root, "simulator")
+            os.makedirs(sim_dir, exist_ok=True)  # Create if not exists
+            self.workdir.set(sim_dir)
+            self.workdirentry.configure(style='TEntry')
+            self.parent.onevent((MSG.SETVAR,'workdir',sim_dir))
 
         if defaultinstrument is not None:
             try:
@@ -682,14 +718,16 @@ class PlotFrame(ttk_b.Frame):
         
         if self.measurement is None:
             self.measurement = meas
+
         # Apply corrections to voltage readings
-        #fclist = loadcorrection('tbaf1m.csv')
+        #measurement.loadcorrection(filePath)
+        #meas.applycorrection()
         #datax = meas["Frequency"]
         #data = applycorrection(meas["Sig_Level"], datax, fclist)
 
         # Clear the canvas before drawing the plot
         self.ax.clear()        
-
+        
         #self.fig, self.ax = plt.subplots(1,1)
         #self.ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
         self.ax.set_title(title)
@@ -828,7 +866,6 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.msgqueue = queue.SimpleQueue()
         self.savedata = {}
         self.instrumentlist = load_instruments()
-
         self.columnconfigure(1,weight=1)
         self.columnconfigure(2,weight=1)
         self.columnconfigure(3,weight=1)
@@ -844,8 +881,16 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.cfgview = ConfigView(self) 
         self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')        
         #self.rowconfigure(3, weight=1)
+
+        if SIMULATOR_MODE:
+            # fire events to get get into ready state
+            self.onevent((MSG.SETMEASTEMPLATE, self.tb.mcfg.get(),self.tb.mconfigs[self.tb.mcfg.get()]))
+            self.onevent((MSG.SETEUTTEMPLATE, self.tb.eutcfg.get(),self.tb.eutconfigs[self.tb.eutcfg.get()])) 
+            self.onevent((MSG.SETVAR,'instrumentname',self.tb.instrumentvar.get()))
         self.after(500, self.ontimer)
-        
+
+
+
 
     def getinstrument(self, name):        
         try:
@@ -954,8 +999,11 @@ class MeasureWindow(ttk_b.Window, EventHandler):
                 if self.cfgview.isvalid():
                     self.measurement = Measurement(self.instrument)
                     meascfg = (self.cfgview.get_measconfig())
-                    self.savedata['measurementconfig'] = meascfg                            
-                    self.measurement.setconfig(meascfg)                
+                    self.savedata['measurementconfig'] = meascfg                    
+                    self.measurement.setconfig(meascfg)    
+                    # ToDo: Add support for file selection 
+                    correction_file_path = 'config/correction/cicor-tbaf1m.json'
+                    self.measurement.loadcorrection(correction_file_path)         
                     #self.measurement = Measurement()
                     #self.measurement.loadconfig(self.mcfgpath)
                     self.measurement.startmeasurement(msgqueue = self.msgqueue)
