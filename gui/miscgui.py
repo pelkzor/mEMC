@@ -714,7 +714,7 @@ class PlotFrame(ttk_b.Frame):
             print('peakplot:', self.peakplot)
             self.canvas.draw()            
 
-    def plot(self, meas, title='title', xlim=(30_000_000,1_000_000_000), ylim=(0,60)):        
+    def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,60)):        
         
         if self.measurement is None:
             self.measurement = meas
@@ -732,10 +732,16 @@ class PlotFrame(ttk_b.Frame):
         #self.ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
         self.ax.set_title(title)
         self.ax.set_xlabel('Frequency [Hz]')
-        self.ax.set_ylabel('dBuV')
+        self.ax.set_ylabel('dBµV')
 
         self.fig.text(0.01,0.95,'notes:')
         self.ax.set_ylim(ylim)
+        #load x limits from measurement config
+        if meas.meascfg is not None:
+            xlim = meas.meascfg['fstart'], meas.meascfg['fstop'] 
+        #add some padding to the min and max x values to improve readability
+        x_padding = (xlim[0]+xlim[1]) * 0.01
+        xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
         self.ax.set_xlim(xlim)
         self.ax.grid()
 
