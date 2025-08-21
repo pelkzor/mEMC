@@ -41,10 +41,12 @@ class ResultTable(ttk_b.Frame):
                 continue
 
     def loadfiles(self):
-        filenames = list(Path('results').glob('*.json'))
+        results_dir = Path('results')
+        # Create the directory if it doesn't exist
+        results_dir.mkdir(exist_ok=True)
+        filenames = list(results_dir.glob('*.json'))
         rows = []
         for name in filenames:
-            print(name)
             with open(name, 'r') as f:
                 result = json.loads(f.read())
                 self.results[result['time']] = result
@@ -62,7 +64,6 @@ class ResultTable(ttk_b.Frame):
         
         self.table.insert_rows('end', rows)
         self.table.load_table_data()
-        print('done')
 class ResultBrowser(ttk_b.Toplevel):    
 
     def __init__(self):
