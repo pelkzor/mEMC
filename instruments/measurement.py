@@ -95,7 +95,8 @@ class Measurement():
         return max(data)    
 
     def measure_thread(self, msgqueue : queue.SimpleQueue):
-        self.runthread = True  
+        self.runthread = True
+        self.ydataRaw = []
         self.ydata = []
         self.meascfg = self.defaultparams | self.meascfg
         self.createsubmeasurements()
@@ -114,8 +115,11 @@ class Measurement():
             time.sleep(sweeptime * self.meascfg['sweepcount'] + 1)
             while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
                 self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
-            self.ydata.extend(self.instrument.get('data'))
+            self.ydataRaw.extend(self.instrument.get('data'))
+            self.ydata = self.ydataRaw.copy()
+            #self.ydata.extend(self.instrument.get('data'))
             self.createfrequencylist(m[1])
+            self.applycorrection()
             msgqueue.put((MSG.THREAD,THREADMSG.DATA,None))
         self.runthread = False
         msgqueue.put((MSG.THREAD,THREADMSG.DONE, None))

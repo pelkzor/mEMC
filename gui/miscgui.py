@@ -478,20 +478,20 @@ class ToolBar(ttk_b.Frame):
         self.isconnected = False
         self.parent = parent
 
-        ttk_b.Label(self, text='Instrument',width=25, anchor='e').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD,sticky='EW')
+        ttk_b.Label(self, text='Instrument',width=16, anchor='e').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD,sticky='EW')
         
         self.instrumentvar = ttk_b.StringVar()
         
         self.instrumentvar.trace_add('write', lambda *_: parent.onevent((MSG.SETVAR,'instrumentname',self.instrumentvar.get()))) 
-        self.instrumentselect = ttk_b.Combobox(self, values=[i[0] for i in ilist], textvariable=self.instrumentvar, state='readonly', width=32)        
+        self.instrumentselect = ttk_b.Combobox(self, values=[i[0] for i in ilist], textvariable=self.instrumentvar, state='readonly', width=16)        
         self.instrumentselect.grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW') 
 
-        ttk_b.Label(self, text='IP address [:port]',width=25, anchor='e').grid(row=1, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
+        ttk_b.Label(self, text='IP address [:port]',width=16, anchor='e').grid(row=1, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
         
         self.ipaddressvar = ttk_b.StringVar()
         self.ipaddressvar.trace_add('write', lambda *_: parent.onevent((MSG.SETVAR,'ipaddress',self.ipaddressvar.get()))) #changed to validate function
         self.ipaddressvar.set(defaultipaddress)
-        self.ipaddressentry = ttk_b.Entry(self, textvariable=self.ipaddressvar, width=32)
+        self.ipaddressentry = ttk_b.Entry(self, textvariable=self.ipaddressvar, width=16)
         self.ipaddressentry.grid(row=1, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
         self.btnconnect = ttk_b.Button(self, text='Connect', command = lambda : parent.onevent((MSG.DISCONNECT if self.isconnected else MSG.CONNECT,self.instrumentvar.get(),self.ipaddressvar.get())))
@@ -499,16 +499,27 @@ class ToolBar(ttk_b.Frame):
 
         ttk_b.Label(self, text='Measurement template',width=25, anchor='e').grid(row=0, column=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.mcfg = ttk_b.StringVar()
-        self.mcfgselect = ttk_b.Combobox(self, textvariable=self.mcfg, state='readonly', width=32)
+        self.mcfgselect = ttk_b.Combobox(self, textvariable=self.mcfg, state='readonly', width=16)
         self.mcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETMEASTEMPLATE,self.mcfg.get(),self.mconfigs[self.mcfg.get()])) )
         self.mcfgselect.grid(row=0, column=3, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
-
         ttk_b.Label(self, text='EUT Template',width=25, anchor='e').grid(row=0, column=4, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.eutcfg = ttk_b.StringVar()
-        self.eutcfgselect = ttk_b.Combobox(self, textvariable=self.eutcfg, state='readonly', width=32)
+        self.eutcfgselect = ttk_b.Combobox(self, textvariable=self.eutcfg, state='readonly', width=16)
         self.eutcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETEUTTEMPLATE,self.eutcfg.get(),self.eutconfigs[self.eutcfg.get()])) )
         self.eutcfgselect.grid(row=0, column=5, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
+
+        ttk_b.Label(self, text='Limit',width=16, anchor='e').grid(row=0, column=6, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
+        self.limitcfg = ttk_b.StringVar()
+        self.limitcfgselect = ttk_b.Combobox(self, textvariable=self.limitcfg, state='readonly', width=16)
+        self.limitcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETLIMIT,self.limitcfg.get(),self.limitconfigs[self.limitcfg.get()])) )
+        self.limitcfgselect.grid(row=0, column=7, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
+
+        ttk_b.Label(self, text='Correction factor',width=25, anchor='e').grid(row=0, column=8, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
+        self.correctioncfg = ttk_b.StringVar()
+        self.correctioncfgselect = ttk_b.Combobox(self, textvariable=self.limitcfg, state='readonly', width=16)
+        self.correctioncfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETLIMIT,self.limitcfg.get(),self.limitconfigs[self.limitcfg.get()])) )
+        self.correctioncfgselect.grid(row=0, column=9, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
 
         ttk_b.Label(self, text='Working directory',width=25, anchor='e').grid(row=1, column=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
@@ -605,9 +616,19 @@ class PlotFrame(ttk_b.Frame):
 
         self.ax = self.fig.add_subplot()
         # Create a Matplotlib figure and plot        
-        log = True
-        if log:
-            self.ax.set_xscale("log")       
+        # log = True
+        # if log:
+        #     self.ax.set_xscale("log")       
+        xlim=(0,1_000_000_000)
+        ylim=(0,125)
+        x_padding = (xlim[0]+xlim[1]) * 0.01
+        xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim(ylim)
+        self.ax.set_xlabel('Frequency [Hz]')
+        self.ax.set_ylabel('dBµV')
+        self.ax.grid()
+        
         # Create a canvas and add the figure to it
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         
@@ -721,7 +742,11 @@ class PlotFrame(ttk_b.Frame):
             print('peakplot:', self.peakplot)
             self.canvas.draw()            
 
+<<<<<<< HEAD
     def plot(self, meas, title='EMC Plot', xlim=(30_000_000,1_000_000_000), ylim=(0,60)):        
+=======
+    def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,125)):        
+>>>>>>> c9367de7a69ba86955c16856c24cd8d27ba16b34
         
         if self.measurement is None:
             self.measurement = meas
@@ -739,10 +764,16 @@ class PlotFrame(ttk_b.Frame):
         #self.ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
         self.ax.set_title(title)
         self.ax.set_xlabel('Frequency [Hz]')
-        self.ax.set_ylabel('dBuV')
+        self.ax.set_ylabel('dBµV')
 
         #self.fig.text(0.01,0.95,'notes:')
         self.ax.set_ylim(ylim)
+        #load x limits from measurement config
+        if meas.meascfg is not None:
+            xlim = meas.meascfg['fstart'], meas.meascfg['fstop'] 
+        #add some padding to the min and max x values to improve readability
+        x_padding = (xlim[0]+xlim[1]) * 0.01
+        xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
         self.ax.set_xlim(xlim)
         self.ax.grid()
 
@@ -899,8 +930,6 @@ class MeasureWindow(ttk_b.Window, EventHandler):
             self.onevent((MSG.SETEUTTEMPLATE, self.tb.eutcfg.get(),self.tb.eutconfigs[self.tb.eutcfg.get()])) 
             self.onevent((MSG.SETVAR,'instrumentname',self.tb.instrumentvar.get()))
         self.after(500, self.ontimer)
-
-
 
 
     def getinstrument(self, name):        
