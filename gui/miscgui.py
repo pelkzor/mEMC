@@ -16,6 +16,8 @@ import queue
 import logging
 import os
 
+import numpy as np
+from scipy.signal import find_peaks
 from enum import IntEnum, auto
 
 from pathlib import Path
@@ -751,9 +753,21 @@ class PlotFrame(ttk_b.Frame):
             print(f"After measureqp, peaklist: {self.peaklist}")
 
     def onaddpoint(self):
-        if self.point is not None:            
-            iid = str(round(self.point[0]/1000000,3))       
-            self.peaklist.append({'iid':iid, 'freq':self.point[0], 'pk':self.point[1], 'qpk':None, 'limit': None})            
+        if self.point is not None:
+            iid = str(round(self.point[0]/1000000,3))
+            limit_val = None
+            # Calculate limit for this frequency if limit_plot exists
+            if hasattr(self, 'limit_plot') and self.limit_plot is not None:
+                limit_x = self.limit_plot.get_xdata()
+                limit_y = self.limit_plot.get_ydata()
+                limit_val = float(np.interp(self.point[0], limit_x, limit_y))
+            self.peaklist.append({
+                'iid': iid,
+                'freq': self.point[0],
+                'pk': self.point[1],
+                'qpk': None,
+                'limit': limit_val
+            })
             self.updatepeakview()
             self.plotpeaks()
             for i in self.peaklist:
@@ -776,19 +790,20 @@ class PlotFrame(ttk_b.Frame):
 
     def plotpeaks(self):
         if len(self.peaklist):            
-            if hasattr(self,'peakplot') and self.peakplot is not None:
-                self.peakplot.remove()
-            if hasattr(self,'qpeakplot') and self.qpeakplot is not None:
-                self.qpeakplot.remove()
             peakx = [ i['freq'] for i in self.peaklist if i['qpk'] is None]
             peaky = [ i['pk'] for i in self.peaklist if i['qpk'] is None]            
             
             qpeakx = [ i['freq'] for i in self.peaklist if i['qpk'] is not None]
             qpeaky= [ i['qpk'] for i in self.peaklist if i['qpk'] is not None]
             
+            # Color qpeaks red if exceeding limit, green otherwise
+            qpeakcolors = [
+                'red' if i['qpk'] is not None and i['limit'] is not None and i['qpk'] > i['limit'] else 'green'
+                for i in self.peaklist if i['qpk'] is not None
+            ]
             self.peakplot = self.ax.scatter(peakx, peaky, color='blue', marker='x')
             if len(qpeaky):
-                self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, color='red', marker='^')
+                self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, c=qpeakcolors, marker='^')
             print('peakplot:', self.peakplot)
             self.canvas.draw()
 
@@ -817,7 +832,14 @@ class PlotFrame(ttk_b.Frame):
         if self.measurement is None:
             self.measurement = meas
 
-        self.remove_limit() #clear limit before clearing axes to avoid exception
+        # Remove axes before clearing to avoid exception
+        self.remove_limit() 
+        if hasattr(self,'exceedslimitplot') and self.exceedslimitplot is not None:
+            self.exceedslimitplot.remove()
+        if hasattr(self,'peakplot') and self.peakplot is not None:
+                self.peakplot.remove()
+        if hasattr(self,'qpeakplot') and self.qpeakplot is not None:
+                self.qpeakplot.remove()
         # Clear the canvas before drawing the plot
         self.ax.clear()        
        
@@ -848,7 +870,22 @@ class PlotFrame(ttk_b.Frame):
 
         cursor = mplcursors.cursor(line)
         cursor.connect('add', self.onpointselect)
-        
+
+        # After plotting meas.xdata, meas.ydata and drawing the limit plot:
+        if hasattr(self, 'limit_plot') and self.limit_plot is not None:
+            limit_x = self.limit_plot.get_xdata()
+            limit_y = self.limit_plot.get_ydata()
+            interp_limit = np.interp(meas.xdata, limit_x, limit_y)
+            ydata = np.array(meas.ydata)
+            # Find peaks in ydata
+            peak_indices, _ = find_peaks(ydata)
+            # Only keep peaks above the limit
+            peaks_above_limit = peak_indices[ydata[peak_indices] > interp_limit[peak_indices]]
+            peakx = np.array(meas.xdata)[peaks_above_limit]
+            peaky = ydata[peaks_above_limit]
+            # Plot only one point per peak above the limit
+            self.exceedslimitplot = self.ax.scatter(peakx, peaky, color='red', marker='v')
+
         # Plot graph to canvas
         self.canvas.draw()
     
