@@ -565,10 +565,20 @@ class ToolBar(ttk_b.Frame):
                     self.mcfg.set(self.mcfgselect['values'][0])
                     
             # autoset eutconfig
-            if  len(self.eutconfigs) > 0:
+            if len(self.eutconfigs) > 0:
                 self.eutcfgselect.current = 0
                 if self.eutcfgselect['values']:
                     self.eutcfgselect.set(self.eutcfgselect['values'][0])
+
+            if len(self.standards) > 0:
+                self.standardcfgselect.current = 0
+                if self.standardcfgselect['values']:
+                    self.standardcfgselect.set(self.standardcfgselect['values'][0])
+                    
+            if len(self.correctionfactors) > 0:
+                self.correctioncfgselect.current = 0
+                if self.correctioncfgselect['values']:
+                    self.correctioncfgselect.set(self.correctioncfgselect['values'][0])
             
             # simulator work directory
             # Set working directory to script root folder/simulator
@@ -969,6 +979,8 @@ class MeasureWindow(ttk_b.Window, EventHandler):
             # fire events to get get into ready state
             self.onevent((MSG.SETMEASTEMPLATE, self.tb.mcfg.get(),self.tb.mconfigs[self.tb.mcfg.get()]))
             self.onevent((MSG.SETEUTTEMPLATE, self.tb.eutcfg.get(),self.tb.eutconfigs[self.tb.eutcfg.get()])) 
+            self.onevent((MSG.SETSTANDARD, self.tb.standardcfg.get(),self.tb.standards[self.tb.standardcfg.get()])) 
+            self.onevent((MSG.SETCORRECTION, self.tb.correctioncfg.get(),self.tb.correctionfactors[self.tb.correctioncfg.get()])) 
             self.onevent((MSG.SETVAR,'instrumentname',self.tb.instrumentvar.get()))
         self.after(500, self.ontimer)
 
