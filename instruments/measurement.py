@@ -183,8 +183,8 @@ class Measurement():
         while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
             self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
         data = self.instrument.get('data')
-        #TODO Correction factor somewhere here
-        return max(data)    
+        # Get max and adjust with correction
+        return max(data) + self.getfc(freq)   
 
     def measure_thread(self, msgqueue : queue.SimpleQueue):
         self.runthread = True
