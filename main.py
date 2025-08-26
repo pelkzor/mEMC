@@ -38,8 +38,8 @@ def exitapp():
 
 # Generate GUI window
 window = MeasureWindow(themename = theme["default"])
-
 window.title('mEMC Test')
+
 screen_width = window.winfo_screenwidth()
 screen_height = window.winfo_screenheight()
 desired_width = 1920

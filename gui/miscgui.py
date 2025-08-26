@@ -1,4 +1,7 @@
+#External imports
 import tkinter as tk
+from tkinter import ttk, filedialog
+
 import ttkbootstrap as ttk_b
 from ttkbootstrap.scrolled import ScrolledFrame
 from ttkbootstrap.tableview import Tableview
@@ -6,30 +9,33 @@ from ttkbootstrap.constants import *
 from ttkbootstrap.tooltip import ToolTip
 from ttkbootstrap.dialogs.dialogs import Messagebox
 
-from tkinter import ttk
-from tkinter import filedialog
+from secrets import token_hex
+import json
+import time
+import queue
+import logging
+import os
+
+from enum import IntEnum, auto
+
 from pathlib import Path
+
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import mplcursors
 from matplotlib.backend_bases import key_press_handler
 
+#Internal imports
+from utils.message import *
+from utils.reportgenerator import json_to_pdf
 from config import LOCAL_IP
 
 from instruments import measurement
 from instruments.measurement import Measurement
+
 #from DSA832_instrument import DSA832
 #from simulator_instrument import Simulator
-from secrets import token_hex
-import json
-import time
-
-from enum import IntEnum, auto
-from utils.message import *
-import queue
-import logging
-import os
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='emc.log', encoding='utf-8', level=logging.ERROR)
@@ -637,7 +643,7 @@ class PlotFrame(ttk_b.Frame):
         super().__init__(parent)
         self.point = None
         self.measurement = None
-        self.peaklist = []                      
+        self.peaklist = []      
         self.fig = plt.Figure(figsize=(5, 7), dpi=100)
         self.fig = plt.Figure()
 
@@ -742,15 +748,16 @@ class PlotFrame(ttk_b.Frame):
             peak['qpk'] = self.measurement.measureqp_thread(peak['freq'])
             self.updatepeakview()
             self.plotpeaks()
+            print(f"After measureqp, peaklist: {self.peaklist}")
 
     def onaddpoint(self):
         if self.point is not None:            
-            iid = str(round(self.point[0]/1000000,3))
-            #self.peaklist.append([iid, self.point[0], self.point[1], None, None])            
+            iid = str(round(self.point[0]/1000000,3))       
             self.peaklist.append({'iid':iid, 'freq':self.point[0], 'pk':self.point[1], 'qpk':None, 'limit': None})            
             self.updatepeakview()
             self.plotpeaks()
             for i in self.peaklist:
+                print("Adding to peaklist")
                 print(i)
 
     def updatepeakview(self):
@@ -805,7 +812,11 @@ class PlotFrame(ttk_b.Frame):
 
         self.add_limit(frequencies, limits)           
 
+<<<<<<< HEAD
+    def plot(self, meas, title='EMC Plot', xlim=(30_000_000,1_000_000_000), ylim=(0,60)):        
+=======
     def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,125)):        
+>>>>>>> c9367de7a69ba86955c16856c24cd8d27ba16b34
         
         if self.measurement is None:
             self.measurement = meas
@@ -818,7 +829,7 @@ class PlotFrame(ttk_b.Frame):
         self.ax.set_xlabel('Frequency [Hz]')
         self.ax.set_ylabel('dBµV')
 
-        self.fig.text(0.01,0.95,'notes:')
+        #self.fig.text(0.01,0.95,'notes:')
         self.ax.set_ylim(ylim)
         # Load x limits from measurement config
         if meas.meascfg is not None:
@@ -916,7 +927,7 @@ class MeasurementState(IntEnum):
 
 class MeasureFrame(ttk_b.Frame):
     
-    def __init__(self, parent):
+    def __init__(self, parent, plot_frame=None,):
         super().__init__(parent)
         #self.measname.trace_add('write', lambda *_: parent.onevent( ('setvar','measname',self.measname.get()))) #changed to validate function
         
@@ -924,6 +935,8 @@ class MeasureFrame(ttk_b.Frame):
         #ttk_b.Entry(self, textvariable=self.measname, validate='focusout', validatecommand=lambda : parent.onevent((MSG.SETVAR,'measname',self.measname.get()))).grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.measname = EntryFrame(self, 'measname', 'Measurement Name', '', parent)
         self.measname.pack()
+
+        self.plot_frame = plot_frame
 
         self.measurebtn = ttk_b.Button(self, text='measure', command = lambda : parent.onevent((MSG.MEASURE,)))
         self.measurebtn.pack()
@@ -964,6 +977,8 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.columnconfigure(3,weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=2)
+
+        self.plot_frame = None
 
         self.tb = ToolBar(self, defaultipaddress=LOCAL_IP, ilist = self.instrumentlist)
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
@@ -1029,15 +1044,25 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.savedata['type'] = 'result'
         self.savedata['name'] = self.vars.get('measname','undefined')
         self.savedata['time'] = time.strftime('%y%m%d%H%M')
-        self.savedata['comment'] = 'testcomment'        
+        #self.savedata['comment'] = 'testcomment' // Räcker väl med "Notes" som finns att lägga till i EUT-configen?        
         self.savedata['eutconfig'] = self.cfgview.get_eutconfig()
         self.savedata['ydata'] = self.measurement.ydata
         self.savedata['xdata'] = self.measurement.xdata
+
+        if (hasattr(self, 'plotframe') and self.plotframe and 
+            hasattr(self.plotframe, 'peaklist')):
+            self.savedata['peaklist'] = self.plotframe.peaklist
+            print(f"Saving {len(self.plotframe.peaklist)} peaks")
+        else:
+            self.savedata['peaklist'] = []
+            print("Warning: No peaklist found to save")
         
         fname = self.savedata['time'] + '_' + self.savedata['name'] + '.json'
+        json_path = Path(self.vars['workdir']) / fname
         with open(Path(self.vars['workdir']) / fname, 'w') as fout:
             fout.write(json.dumps(self.savedata, indent=4))
-
+        pdf_path = json_path.with_suffix(".pdf")
+        json_to_pdf(json_path, pdf_path, figure=self.plotframe.fig)
         return True
 
     @eventhandler((MSG.CONNECT,))
