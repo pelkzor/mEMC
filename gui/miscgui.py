@@ -868,8 +868,10 @@ class PlotFrame(ttk_b.Frame):
 
         self.drawlimitplot()
 
-        cursor = mplcursors.cursor(line)
-        cursor.connect('add', self.onpointselect)
+        self.cursor = mplcursors.cursor(line)
+        self.cursor.connect('add', self.onpointselect)
+        self.annotation = None
+        self.canvas.mpl_connect("button_press_event", self._on_canvas_click)
 
         # After plotting meas.xdata, meas.ydata and drawing the limit plot:
         if hasattr(self, 'limit_plot') and self.limit_plot is not None:
@@ -899,6 +901,16 @@ class PlotFrame(ttk_b.Frame):
         self.pointentrys.insert(0,str(self.point[1]))
         self.pointentryf.config(state = 'readonly')
         self.pointentrys.config(state = 'readonly')
+
+    def on_right_click(self, event):
+        for sel in self.cursor.selections:
+            self.cursor.remove_selection(sel)
+        self.canvas.draw()
+
+    def _on_canvas_click(self, event):
+        # Matplotlib uses button=3 for right-click
+        if event.button == 3:
+            self.on_right_click(event)
 
 class ConfigView(ttk_b.Frame):
 
