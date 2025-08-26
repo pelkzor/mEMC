@@ -797,13 +797,13 @@ class PlotFrame(ttk_b.Frame):
             qpeaky= [ i['qpk'] for i in self.peaklist if i['qpk'] is not None]
             
             # Color qpeaks red if exceeding limit, green otherwise
-            qpeakcolors = [
-                'red' if i['qpk'] is not None and i['limit'] is not None and i['qpk'] > i['limit'] else 'green'
-                for i in self.peaklist if i['qpk'] is not None
-            ]
+            # qpeakcolors = [
+            #     'red' if i['qpk'] is not None and i['limit'] is not None and i['qpk'] > i['limit'] else 'green'
+            #     for i in self.peaklist if i['qpk'] is not None
+            # ]
             self.peakplot = self.ax.scatter(peakx, peaky, color='blue', marker='x')
             if len(qpeaky):
-                self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, c=qpeakcolors, marker='^')
+                self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, c='darkblue', marker='o')
             print('peakplot:', self.peakplot)
             self.canvas.draw()
 
@@ -886,7 +886,7 @@ class PlotFrame(ttk_b.Frame):
             peakx = np.array(meas.xdata)[peaks_above_limit]
             peaky = ydata[peaks_above_limit]
             # Plot only one point per peak above the limit
-            self.exceedslimitplot = self.ax.scatter(peakx, peaky, color='red', marker='v')
+            self.exceedslimitplot = self.ax.scatter(peakx, peaky, color='red', marker='o', facecolors='none')
 
         # Plot graph to canvas
         self.canvas.draw()
