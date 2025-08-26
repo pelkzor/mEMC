@@ -812,11 +812,7 @@ class PlotFrame(ttk_b.Frame):
 
         self.add_limit(frequencies, limits)           
 
-<<<<<<< HEAD
-    def plot(self, meas, title='EMC Plot', xlim=(30_000_000,1_000_000_000), ylim=(0,60)):        
-=======
     def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,125)):        
->>>>>>> c9367de7a69ba86955c16856c24cd8d27ba16b34
         
         if self.measurement is None:
             self.measurement = meas
