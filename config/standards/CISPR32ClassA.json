@@ -1,0 +1,17 @@
+{
+	"name": "CISPR32 Class A",
+	"type": "standardtemplate",
+	"description": "standard for 1m",
+	"limits": [
+	{
+		"min_freq": 0,
+		"max_freq": 230000000,
+		"limit": 60
+	},
+	{
+		"min_freq": 230000000,
+		"max_freq": null, 
+		"limit": 67
+	}
+	]
+}

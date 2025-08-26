@@ -42,10 +42,15 @@ _DEFAULT_PAD = 5
 _MEASUREMENT_PATH = './config/meastempl'
 _EUT_PATH = './config//euttempl'
 _CORRECTION_PATH = './config//correction'
+_STANDARD_PATH = './config//standards'
 
 _TEMPLATETYPE_MEASUREMENT = 'measurementtemplate'
 _TEMPLATETYPE_EUT = 'euttemplate'
+_TEMPLATETYPE_CORRECTION = 'correctiontemplate'
+_TEMPLATETYPE_STANDARD = 'standardtemplate'
 _TEMPLATE_KEY = 'template'
+_CORRECTION_KEY = 'correction'
+_STANDARD_KEY = 'limits'
 
 #Set to true for quicker debug cycles
 #Preselects all dropdowns
@@ -81,6 +86,21 @@ def load_instruments():
     result = "Loaded instruments: " +", ".join(names)
     print(result)
     return ilist
+
+def get_correctionconfigs():
+    filenames = list(Path(_CORRECTION_PATH).glob('*.json'))    
+    correctionfactors = {}
+
+    for fname in filenames:
+        try:
+            with open(fname,'r') as f:
+                cfg = json.loads(f.read())            
+                if cfg['type'] == 'correctiontemplate':
+                    correctionfactors[cfg['name']] = fname.resolve()
+        except Exception as e:
+            print(e)
+    
+    return correctionfactors
 
 def get_measurementconfigs():
     filenames = list(Path(_MEASUREMENT_PATH).glob('*.json'))    
@@ -503,18 +523,17 @@ class ToolBar(ttk_b.Frame):
         self.eutcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETEUTTEMPLATE,self.eutcfg.get(),self.eutconfigs[self.eutcfg.get()])) )
         self.eutcfgselect.grid(row=0, column=5, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
-        ttk_b.Label(self, text='Limit',width=16, anchor='e').grid(row=0, column=6, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
-        self.limitcfg = ttk_b.StringVar()
-        self.limitcfgselect = ttk_b.Combobox(self, textvariable=self.limitcfg, state='readonly', width=16)
-        self.limitcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETLIMIT,self.limitcfg.get(),self.limitconfigs[self.limitcfg.get()])) )
-        self.limitcfgselect.grid(row=0, column=7, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
+        ttk_b.Label(self, text='Standard',width=16, anchor='e').grid(row=0, column=6, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
+        self.standardcfg = ttk_b.StringVar()
+        self.standardcfgselect = ttk_b.Combobox(self, textvariable=self.standardcfg, state='readonly', width=16)
+        self.standardcfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETSTANDARD,self.standardcfg.get(),self.standards[self.standardcfg.get()])) )
+        self.standardcfgselect.grid(row=0, column=7, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
         ttk_b.Label(self, text='Correction factor',width=25, anchor='e').grid(row=0, column=8, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.correctioncfg = ttk_b.StringVar()
-        self.correctioncfgselect = ttk_b.Combobox(self, textvariable=self.limitcfg, state='readonly', width=16)
-        self.correctioncfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETLIMIT,self.limitcfg.get(),self.limitconfigs[self.limitcfg.get()])) )
+        self.correctioncfgselect = ttk_b.Combobox(self, textvariable=self.correctioncfg, state='readonly', width=16)
+        self.correctioncfgselect.bind('<<ComboboxSelected>>', lambda _: parent.onevent((MSG.SETCORRECTION,self.correctioncfg.get(),self.correctionfactors[self.correctioncfg.get()])) )
         self.correctioncfgselect.grid(row=0, column=9, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
-
 
         ttk_b.Label(self, text='Working directory',width=25, anchor='e').grid(row=1, column=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
         self.workdir = ttk_b.StringVar()
@@ -594,6 +613,10 @@ class ToolBar(ttk_b.Frame):
         self.mcfgselect['values'] = [k for k in self.mconfigs.keys()]
         self.eutconfigs = get_templates(_EUT_PATH, _TEMPLATETYPE_EUT)
         self.eutcfgselect['values'] = [k for k in self.eutconfigs.keys()]
+        self.correctionfactors = get_templates(_CORRECTION_PATH, _TEMPLATETYPE_CORRECTION)
+        self.correctioncfgselect['values'] = [k for k in self.correctionfactors.keys()]
+        self.standards = get_templates(_STANDARD_PATH, _TEMPLATETYPE_STANDARD)
+        self.standardcfgselect['values'] = [k for k in self.standards.keys()]
 
 class EUTFrame(ttk_b.Frame):
     def __init__(self, parent):
@@ -676,6 +699,23 @@ class PlotFrame(ttk_b.Frame):
         # Minimum sizes to prevent widgets from becoming too small
         self.tvframe.config(width=400, height=200)
 
+    def remove_limit(self):
+        if hasattr(self, 'limit_plot') and self.limit_plot is not None:
+            self.limit_plot.remove()
+            self.limit_plot = None
+            self.canvas.draw()
+
+    def add_limit(self, frequencies, limit):
+        # Remove previous limit_plot if it exists
+        self.remove_limit()
+        # Draw limit over plot width
+        xmin, xmax = self.ax.get_xlim()
+        frequencies[0] = xmin
+        frequencies[-1] = xmax
+        # Add new limit_plot and keep reference
+        self.limit_plot, = self.ax.plot(frequencies, limit, color='green', linewidth=2)
+        self.canvas.draw()
+
     def getpeak(self, iid):
         for p in self.peaklist:
             if iid == p['iid']:
@@ -733,34 +773,49 @@ class PlotFrame(ttk_b.Frame):
             if len(qpeaky):
                 self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, color='red', marker='^')
             print('peakplot:', self.peakplot)
-            self.canvas.draw()            
+            self.canvas.draw()
+
+    def setlimit(self, standardtemplate):
+        self.standardtemplate = standardtemplate
+
+    def drawlimitplot(self):
+        if self.standardtemplate is None:
+            return
+        # Add standard limits to plot
+        limitstemplate = self.standardtemplate["limits"]["value"]
+        frequencies = []
+        limits = []
+
+        for entry in limitstemplate:
+            min_f = entry.get("min_freq", 0)
+            max_f = entry.get("max_freq", 1_000_000_000)
+            limit = entry.get("limit", 0)
+            frequencies.extend([min_f, max_f if max_f is not None else 1_000_000_000])
+            limits.extend([limit, limit])
+
+        self.add_limit(frequencies, limits)           
 
     def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,125)):        
         
         if self.measurement is None:
             self.measurement = meas
 
-        # Apply corrections to voltage readings
-        #measurement.loadcorrection(filePath)
-        #meas.applycorrection()
-        #datax = meas["Frequency"]
-        #data = applycorrection(meas["Sig_Level"], datax, fclist)
-
+        self.remove_limit() #clear limit before clearing axes to avoid exception
         # Clear the canvas before drawing the plot
         self.ax.clear()        
-        
-        #self.fig, self.ax = plt.subplots(1,1)
-        #self.ax.set_facecolor((0.0,0.5,1.0,0.1))     # Assign background color
+       
         self.ax.set_title(title)
         self.ax.set_xlabel('Frequency [Hz]')
         self.ax.set_ylabel('dBµV')
 
         self.fig.text(0.01,0.95,'notes:')
         self.ax.set_ylim(ylim)
-        #load x limits from measurement config
+        # Load x limits from measurement config
         if meas.meascfg is not None:
-            xlim = meas.meascfg['fstart'], meas.meascfg['fstop'] 
-        #add some padding to the min and max x values to improve readability
+            xlim = meas.meascfg['fstart'], meas.meascfg['fstop']
+
+
+        # Add some padding to the min and max x values to improve readability
         x_padding = (xlim[0]+xlim[1]) * 0.01
         xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
         self.ax.set_xlim(xlim)
@@ -771,24 +826,12 @@ class PlotFrame(ttk_b.Frame):
         self.ax.xaxis.set_major_formatter(mkformatter)
 
         line = self.ax.plot(meas.xdata, meas.ydata, linewidth = 0.5, label = 'test')
-        #line2 = self.ax.plot(meas.datax, [x-3 for x in meas.data], linewidth = 0.5, label = 'test')
+
+        self.drawlimitplot()
 
         cursor = mplcursors.cursor(line)
         cursor.connect('add', self.onpointselect)
         
-        #mplcursors.cursor(line2)
-        '''if ref:
-            axis.plot(ref.datax, ref.data, linewidth = 0.5, ls=':')
-            
-        if peaklist:            
-            axis.scatter(peaklist[0] , peaklist[1], edgecolors='#e86231', facecolor='none')
-        
-
-        axis.set_title(title)
-        axis.set_xlabel(xlabel)
-        axis.set_ylabel(ylabel)
-        axis.grid(True)
-        '''
         # Plot graph to canvas
         self.canvas.draw()
     
@@ -812,6 +855,8 @@ class ConfigView(ttk_b.Frame):
         self.measureframe = MeasureFrame(self.nb)
         self.meascfgedit = ConfigEditor(self.nb, template=None)
         self.eutcfgedit = ConfigEditor(self.nb, template=None)
+        self.correctionedit = ConfigEditor(self.nb, template=None)
+        self.standardedit =  ConfigEditor(self.nb, template=None)
         self.nb.add(self.measureframe, text='Measure')
         self.nb.add(self.eutcfgedit, text='EUT config')
         self.nb.add(self.meascfgedit, text='Measurement config')
@@ -828,18 +873,29 @@ class ConfigView(ttk_b.Frame):
     def updatemeasurementtemplate(self, template):
         self.meascfgedit.updateconfig(template)
 
+    def updatecorrectionfactor(self, factor):
+        # TODO add to editor?
+        self.correctionedit.updateconfig(factor)
+
+    def updatestandard(self, standard):
+        # TODO add to editor?
+        self.standardedit.updateconfig(standard)
+
     def get_eutconfig(self):
         return self.eutcfgedit.getdata()
     
     def get_measconfig(self):
         return self.meascfgedit.getdata()
     
-    def isvalid(self):
-        return self.eutcfgedit.isvalid() and self.meascfgedit.isvalid()
+    def get_correction(self):
+        return self.correctionedit.getdata()
 
-    #def update_eutcfg(self, path):
-    #    self.meascfgedit. 
-    #def update_mcfg(self, path):
+    def get_standard(self):
+        return self.standardedit.getdata()
+
+    def isvalid(self):
+        return self.eutcfgedit.isvalid() and self.meascfgedit.isvalid() and self.correctionedit.isvalid() and self.standardedit.isvalid()
+
 
 
 class MeasurementState(IntEnum):
@@ -1008,6 +1064,28 @@ class MeasureWindow(ttk_b.Window, EventHandler):
             self.cfgview.updateeuttemplate(tmpl[_TEMPLATE_KEY])
         return True
     
+
+    @eventhandler((MSG.SETCORRECTION,))
+    def onevent_setcorrectionfactor(self, evt, name, path):
+        self.correctionpath = path
+        tmpl = load_template(path, _TEMPLATETYPE_CORRECTION)
+        if tmpl is not None:            
+            self.correctiontemplate = Measurement.modifycorrectiontemplate(tmpl[_CORRECTION_KEY])                    
+            self.cfgview.updatecorrectionfactor(self.correctiontemplate)
+        return True
+    
+    @eventhandler((MSG.SETSTANDARD,))
+    def onevent_setstandard(self, evt, name, path):
+        self.standardpath = path
+        tmpl = load_template(path, _TEMPLATETYPE_STANDARD)
+        if tmpl is not None:            
+            self.standardtemplate = Measurement.modifystandardtemplate(tmpl[_STANDARD_KEY])                    
+            self.cfgview.updatestandard(self.standardtemplate)
+            self.plotframe.setlimit(self.standardtemplate)
+            self.plotframe.drawlimitplot()
+        return True
+    
+
     @eventhandler((MSG.SETVAR,))
     def onevent_setvar(self, evt, varname, value):
         self.vars[varname] = value
@@ -1026,11 +1104,8 @@ class MeasureWindow(ttk_b.Window, EventHandler):
                     meascfg = (self.cfgview.get_measconfig())
                     self.savedata['measurementconfig'] = meascfg                    
                     self.measurement.setconfig(meascfg)    
-                    # ToDo: Add support for file selection 
-                    correction_file_path = 'config/correction/cicor-tbaf1m.json'
-                    self.measurement.loadcorrection(correction_file_path)         
-                    #self.measurement = Measurement()
-                    #self.measurement.loadconfig(self.mcfgpath)
+                    correction = (self.cfgview.get_correction())
+                    self.measurement.setcorrectiondata(correction)         
                     self.measurement.startmeasurement(msgqueue = self.msgqueue)
                     self.measstate = MeasurementState.RUNNING                         
                 else:
@@ -1058,7 +1133,6 @@ class MeasureWindow(ttk_b.Window, EventHandler):
     
     def processthreadmsg(self, type, data=None):
         if type == THREADMSG.DATA:
-            self.plotframe.plot(self.measurement)
+            self.plotframe.plot(self.measurement,self.vars.get('measname',''))
         if type == THREADMSG.DONE:
             self.measstate = MeasurementState.DONE
-

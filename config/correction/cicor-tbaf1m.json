@@ -1,6 +1,6 @@
 {
-	"name": "cicor-tbaf1m",
-	"type": "correction",
+	"name": "Cicor Tekbox 1m",
+	"type": "correctiontemplate",
 	"description": "correction for antenna 1m",
 	"correction" : {
 		"distance": 1,

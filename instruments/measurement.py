@@ -25,6 +25,74 @@ class Measurement():
         "tracemode": {"type":"select","value":"Maxhold","displayname":"Trace mode","option":["Maxhold","Write","Minhold","Videoavg","Poweravg"]}
     }
 
+    correctiontemplate = {
+    "distance": {
+        "type": "int",
+        "value": 1,
+        "displayname": "Distance",
+        "unit": "m",
+        "tip": "Distance from antenna"
+        },
+        "frequency": {
+            "type": "list",
+            "value": [
+                20000000, 25000000, 27000000, 30000000, 35000000, 40000000, 50000000, 60000000, 70000000, 80000000,
+                90000000, 100000000, 110000000, 120000000, 125000000, 130000000, 140000000, 150000000, 160000000,
+                170000000, 175000000, 180000000, 190000000, 200000000, 225000000, 250000000, 275000000, 300000000,
+                325000000, 350000000, 400000000, 425000000, 450000000, 475000000, 500000000, 525000000, 550000000,
+                575000000, 600000000, 625000000, 650000000, 675000000, 700000000, 750000000, 800000000, 850000000,
+                900000000, 950000000, 1000000000
+            ],
+            "displayname": "Frequency",
+            "unit": "Hz",
+            "tip": "Frequency points for correction"
+        },
+        "level": {
+            "type": "list",
+            "value": [
+                29.10, 28.95, 28.89, 28.80, 28.65, 28.51, 28.19, 27.72, 26.73, 25.56, 24.76, 24.06, 23.07, 22.11,
+                21.77, 21.54, 21.54, 21.79, 21.23, 19.58, 18.56, 17.66, 16.43, 16.18, 17.24, 17.70, 17.42, 17.85,
+                19.85, 19.73, 21.10, 21.44, 21.61, 22.65, 22.94, 22.94, 23.87, 24.20, 24.23, 25.19, 25.57, 25.53,
+                26.40, 26.81, 28.01, 28.57, 28.89, 30.03, 30.71
+            ],
+            "displayname": "Correction Level",
+            "unit": "dB",
+            "tip": "Correction values corresponding to each frequency"
+        }
+    }
+
+    cispr32classa_template = {
+        "name": {
+            "type": "str",
+            "value": "CISPR32 Class A",
+            "displayname": "Standard Name",
+            "tip": "Name of the standard"
+        },
+        "description": {
+            "type": "str",
+            "value": "standard for 1m",
+            "displayname": "Description",
+            "tip": "Description of the standard"
+        },
+        "limits": {
+            "type": "list",
+            "value": [
+                {
+                    "min_freq": 0,
+                    "max_freq": 230,
+                    "limit": 60
+                },
+                {
+                    "min_freq": 230,
+                    "max_freq": None,
+                    "limit": 67
+                }
+            ],
+            "displayname": "Limits",
+            "tip": "Frequency ranges and their limits"
+        }
+    }
+
     defaultparams = {
         "fstart":None,
         "fstop":None,
@@ -64,6 +132,29 @@ class Measurement():
                 else:
                     template[k]['value'] = v
         return template
+    
+    @classmethod
+    def modifycorrectiontemplate(cls, inputtemplate: dict | None = None ) -> dict:
+
+        template = cls.correctiontemplate.copy()
+        if inputtemplate is None:
+            return template
+        for k,v in inputtemplate.items():
+            if k in template:
+                if type(v) == dict:
+                    template[k]['value'] = v['value']
+                else:
+                    template[k]['value'] = v
+        return template
+    
+    @classmethod
+    def modifystandardtemplate(cls, inputtemplate: dict | None = None ) -> dict:
+        template = cls.cispr32classa_template.copy()
+        if inputtemplate is None:
+            return template
+
+        template["limits"]["value"] = inputtemplate
+        return template
 
     def wait(self, timesec):
         tstart = time.time()
@@ -92,6 +183,7 @@ class Measurement():
         while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
             self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
         data = self.instrument.get('data')
+        #TODO Correction factor somewhere here
         return max(data)    
 
     def measure_thread(self, msgqueue : queue.SimpleQueue):
@@ -176,12 +268,15 @@ class Measurement():
                 
         return 0
 
-    def loadcorrection(self, file):
+    def loadcorrectionfile(self, file):
         with open(file, 'r') as f:
             data = json.load(f)
             self.fclist = list(zip(data["correction"]["frequency"], data["correction"]["level"]))
-        # with open(file, 'r') as f:
-        #     self.fclist = [tuple(x.split(',')) for x in f.read().split('\n')] 
+
+    def setcorrectiondata(self, jsondata):
+        freq = json.loads(jsondata["frequency"])
+        level =  json.loads(jsondata["level"])
+        self.fclist = [(int(f), float(l)) for f, l in zip(freq, level)]
 
 class EUTSetup:
     def __init__(self):

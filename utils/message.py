@@ -10,6 +10,8 @@ class MSG(IntEnum):
     SETWORKDIR = auto()
     SETMEASTEMPLATE = auto()
     SETEUTTEMPLATE = auto()
+    SETCORRECTION = auto()
+    SETSTANDARD = auto()
     MEASURE = auto()
     SETVAR = auto()
     LOG = auto()
