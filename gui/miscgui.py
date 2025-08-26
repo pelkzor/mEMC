@@ -756,7 +756,7 @@ class PlotFrame(ttk_b.Frame):
         if self.point is not None:
             iid = str(round(self.point[0]/1000000,3))
             limit_val = None
-            # Calculate limit for this frequency if limit_plot exists
+            # Calculate limit and margin for this frequency if limit_plot exists
             if hasattr(self, 'limit_plot') and self.limit_plot is not None:
                 limit_x = self.limit_plot.get_xdata()
                 limit_y = self.limit_plot.get_ydata()
@@ -780,7 +780,10 @@ class PlotFrame(ttk_b.Frame):
         self.peaklist.sort(key = lambda x: x['freq'])
         for p in self.peaklist:
             MHz = round(p['freq']/1000000,3)
-            self.treeview.insert('',ttk_b.END, iid=p['iid'], values=(MHz, p['qpk'], p['limit'], None))
+            margin = None
+            if p['qpk'] is not None:
+                margin = p['limit'] - p['qpk']
+            self.treeview.insert('',ttk_b.END, iid=p['iid'], values=(MHz, p['qpk'], p['limit'], margin, None))
 
     def btnevent(self):
         s = self.testentry.get()        
