@@ -1,7 +1,9 @@
+import os                               # For directory manipulation
+# windows workaround for MSVC-runtime and virtual environments
+os.add_dll_directory(str(os.path.dirname(os.path.realpath(__file__)))+"\\.venv")
 import ttkbootstrap as ttk_b            # Import TTKBootstrap
 from ttkbootstrap.constants import *
 import json                             # Import json module
-import os                               # For directory manipulation
 from tkinter import scrolledtext        # Import tkinter module for scroll text box
 from tkinter import *                   # Import all tkinter modules
 from tkinter import filedialog          

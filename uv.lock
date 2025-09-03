@@ -207,6 +207,7 @@ dependencies = [
     { name = "kiwisolver" },
     { name = "matplotlib" },
     { name = "mplcursors" },
+    { name = "msvc-runtime" },
     { name = "numpy" },
     { name = "packaging" },
     { name = "pillow" },
@@ -242,6 +243,7 @@ requires-dist = [
     { name = "kiwisolver", specifier = "==1.4.5" },
     { name = "matplotlib", specifier = "==3.8.3" },
     { name = "mplcursors", specifier = "==0.5.3" },
+    { name = "msvc-runtime", specifier = ">=14.44.35112" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "packaging", specifier = "==23.2" },
     { name = "pillow", specifier = "==10.2.0" },
@@ -269,6 +271,16 @@ dependencies = [
     { name = "matplotlib" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/70/11/26f6016ff1ed7c43b5ee51793ac9f9d14ea7f5af8e2ecf9703d8bb88c96b/mplcursors-0.5.3.tar.gz", hash = "sha256:cb220c8dffaafde195e138faec5654737267f7685d1f0503618cdc333aca0966", size = 88816, upload-time = "2024-01-11T20:53:54.286Z" }
+
+[[package]]
+name = "msvc-runtime"
+version = "14.44.35112"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/7d/f86050e24fd78e76e56145b326bfd3e7ae2c028e87e0732802a0c5144223/msvc_runtime-14.44.35112-cp312-cp312-win32.whl", hash = "sha256:7c5af6756056dbf6f3593f69b0f4575dbbd9e8ec10d3108ff00437da811a7b67", size = 1921505, upload-time = "2025-08-08T03:57:54.509Z" },
+    { url = "https://files.pythonhosted.org/packages/21/3b/134d04268ab8e35853cd007582076429b45d60d6abb1036d159be9c50342/msvc_runtime-14.44.35112-cp312-cp312-win_amd64.whl", hash = "sha256:32f9c706009e16ccc319d6947ce3bffe20e5192bee52b18cf48313f9e7bedfbe", size = 1921899, upload-time = "2025-08-08T03:57:55.648Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/38/f245d6d30a76655293575683aaa5f72a7a70fc8efa1637bf6fd9e5e7e665/msvc_runtime-14.44.35112-cp312-cp312-win_arm64.whl", hash = "sha256:62f272c51f30ce0de1b7a796e50af4d3911b76cbc9bc909917435d094f68d5fe", size = 3208186, upload-time = "2025-08-08T03:57:57.401Z" },
+]
 
 [[package]]
 name = "numpy"
