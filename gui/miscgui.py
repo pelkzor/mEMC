@@ -750,7 +750,8 @@ class PlotFrame(ttk_b.Frame):
             peak['qpk'] = self.measurement.measureqp_thread(peak['freq'])
             self.updatepeakview()
             self.plotpeaks()
-            print(f"After measureqp, peaklist: {self.peaklist}")
+            # Debugging print
+            # print(f"After measureqp, peaklist: {self.peaklist}")
 
     def onaddpoint(self):
         if self.point is not None:
@@ -766,7 +767,8 @@ class PlotFrame(ttk_b.Frame):
                 'freq': self.point[0],
                 'pk': self.point[1],
                 'qpk': None,
-                'limit': limit_val
+                'limit': limit_val,
+                'margin': None
             })
             self.updatepeakview()
             self.plotpeaks()
@@ -783,7 +785,13 @@ class PlotFrame(ttk_b.Frame):
             margin = None
             if p['qpk'] is not None:
                 margin = p['limit'] - p['qpk']
+                p['margin'] = margin
             self.treeview.insert('',ttk_b.END, iid=p['iid'], values=(MHz, p['qpk'], p['limit'], margin, None))
+
+    def cleanpeakview(self):
+        for i in self.treeview.get_children():
+            self.treeview.delete(i)
+        self.peaklist.clear()
 
     def btnevent(self):
         s = self.testentry.get()        
@@ -867,7 +875,7 @@ class PlotFrame(ttk_b.Frame):
         mkformatter = ticker.FuncFormatter(mkfunc)
         self.ax.xaxis.set_major_formatter(mkformatter)
 
-        line = self.ax.plot(meas.xdata, meas.ydata, linewidth = 0.5, label = 'test')
+        line = self.ax.plot(meas.xdata, meas.ydata)
 
         self.drawlimitplot()
 
@@ -875,6 +883,18 @@ class PlotFrame(ttk_b.Frame):
         self.cursor.connect('add', self.onpointselect)
         self.annotation = None
         self.canvas.mpl_connect("button_press_event", self._on_canvas_click)
+
+        @self.cursor.connect("add")
+        def on_add(sel):
+            x, y = sel.target
+            # Formatting of the textbox which appears when you click the graph
+            sel.annotation.set(text=f"x={x/1e6:.1f} M\ny={y:.1f}")
+            
+            sel.annotation.get_bbox_patch().set(
+                boxstyle="round,pad=0.5", 
+                facecolor="lightyellow", 
+                alpha=0.9
+            )
 
         # After plotting meas.xdata, meas.ydata and drawing the limit plot:
         if hasattr(self, 'limit_plot') and self.limit_plot is not None:
@@ -1025,8 +1045,6 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.columnconfigure(3,weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(2, weight=2)
-
-        self.plot_frame = None
 
         self.tb = ToolBar(self, defaultipaddress=LOCAL_IP, ilist = self.instrumentlist)
         self.tb.grid(column=0, row=0, columnspan=4, sticky='NSEW')        
@@ -1179,12 +1197,12 @@ class MeasureWindow(ttk_b.Window, EventHandler):
     
     @eventhandler((MSG.MEASURE,))
     def onevent_measure(self, evt, *args):
-
         match self.measstate:
             case MeasurementState.DISABLED:
                 pass #this should not be possible
             case MeasurementState.READY:
                 if self.cfgview.isvalid():
+                    self.plotframe.cleanpeakview()
                     self.measurement = Measurement(self.instrument)
                     meascfg = (self.cfgview.get_measconfig())
                     self.savedata['measurementconfig'] = meascfg                    

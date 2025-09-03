@@ -3,10 +3,14 @@ from datetime import datetime
 import os
 import matplotlib.pyplot as plt
 import tempfile
+
 from pathlib import Path
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
 
 def json_to_pdf(json_path: Path, pdf_path: Path, figure=None):
     with open(json_path, "r") as f:
@@ -69,14 +73,41 @@ def json_to_pdf(json_path: Path, pdf_path: Path, figure=None):
     if data.get("peaklist", []):
         c.setFont("Helvetica-Bold", 12)
         c.drawString(2 * cm, mc_y - 1 * cm, "Quasi-peaks:")
-        pk_y = mc_y - 1.5 * cm
-        c.setFont("Helvetica", 10)
+
+        table_data = [
+            ['Frequency (MHz)', 'Peak (dBµV)', 'Quasi-peak (dBµV)', 'Limit (dBµV)', 'Margin (dBµV)']
+        ]
+
         for peak in data.get("peaklist", []):
             freq_mhz = peak['freq'] / 1000000
-            c.drawString(2.5 * cm, pk_y,
-                        f"iid: {peak['iid']}, Frequency: {freq_mhz:.2f} MHz, "
-                        f"Peak: {peak['pk']:.2f} dBµV, Quasi-peak: {peak['qpk']:.2f} dBµV, Limit: {peak['limit']}")
-            pk_y -= 0.5 * cm
+            table_data.append([
+                f"{freq_mhz:.2f}",
+                f"{peak['pk']:.2f}",
+                f"{peak['qpk']:.2f}" if peak['qpk'] is not None else "Not measured",
+                f"{peak['limit']}",
+                f"{peak['margin']:.2f}" if peak['margin'] is not None else "Not measured"
+            ])
+        
+        table = Table(table_data, colWidths=[3.5*cm, 2.5*cm, 3.5*cm, 3*cm, 3.5*cm])
+
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        table.wrapOn(c, width, height)
+        table.drawOn(c, 2 * cm, mc_y - 2 * cm - len(table_data) * 0.6 * cm)
+        
+        pk_y = mc_y - 3 * cm - len(table_data) * 0.7 * cm
 
 
     if figure is not None:
