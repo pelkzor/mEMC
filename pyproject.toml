@@ -21,6 +21,7 @@ dependencies = [
     "kiwisolver==1.4.5",
     "matplotlib==3.8.3",
     "mplcursors==0.5.3",
+    "msvc-runtime>=14.44.35112",
     "numpy==1.26.4",
     "packaging==23.2",
     "pillow==10.2.0",
