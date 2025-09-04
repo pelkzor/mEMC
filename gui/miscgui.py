@@ -25,6 +25,7 @@ from pathlib import Path
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from matplotlib import ticker
+from matplotlib.ticker import LinearLocator
 import mplcursors
 from matplotlib.backend_bases import key_press_handler
 
@@ -35,7 +36,6 @@ from config import LOCAL_IP
 
 from instruments import measurement
 from instruments.measurement import Measurement
-
 #from DSA832_instrument import DSA832
 #from simulator_instrument import Simulator
 
@@ -656,8 +656,9 @@ class PlotFrame(ttk_b.Frame):
         #     self.ax.set_xscale("log")       
         xlim=(0,1_000_000_000)
         ylim=(0,125)
-        x_padding = (xlim[0]+xlim[1]) * 0.01
-        xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
+        # uncomment to add padding to x axis
+        # x_padding = (xlim[0]+xlim[1]) * 0.01
+        # xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
         self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
         self.ax.set_xlabel('Frequency [Hz]')
@@ -858,17 +859,18 @@ class PlotFrame(ttk_b.Frame):
 
 
         # Add some padding to the min and max x values to improve readability
-        x_padding = (xlim[0]+xlim[1]) * 0.01
-        xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
+        # x_padding = (xlim[0]+xlim[1]) * 0.01
+        # xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
         self.ax.set_xlim(xlim)
         self.ax.grid()
+
 
         mkfunc = lambda x, pos: '%.1f G' % (x * 1e-9) if x >= 1e9 else '%3.1f M' % (x * 1e-6) if x >= 1e6 else '%3.1f k' % (x * 1e-3)
         mkformatter = ticker.FuncFormatter(mkfunc)
         self.ax.xaxis.set_major_formatter(mkformatter)
 
         line = self.ax.plot(meas.xdata, meas.ydata, linewidth = 0.5, label = 'test')
-
+        self.ax.xaxis.set_major_locator(LinearLocator(numticks=6))
         self.drawlimitplot()
 
         self.cursor = mplcursors.cursor(line)
@@ -882,14 +884,52 @@ class PlotFrame(ttk_b.Frame):
             limit_y = self.limit_plot.get_ydata()
             interp_limit = np.interp(meas.xdata, limit_x, limit_y)
             ydata = np.array(meas.ydata)
-            # Find peaks in ydata
+            xdata = np.array(meas.xdata)
+
+            # Find all peaks
             peak_indices, _ = find_peaks(ydata)
+
             # Only keep peaks above the limit
             peaks_above_limit = peak_indices[ydata[peak_indices] > interp_limit[peak_indices]]
-            peakx = np.array(meas.xdata)[peaks_above_limit]
-            peaky = ydata[peaks_above_limit]
-            # Plot only one point per peak above the limit
-            self.exceedslimitplot = self.ax.scatter(peakx, peaky, color='red', marker='o', facecolors='none')
+
+            # Group contiguous indices into regions
+            limit_x = self.limit_plot.get_xdata()
+            limit_y = self.limit_plot.get_ydata()
+            interp_limit = np.interp(meas.xdata, limit_x, limit_y)
+
+            ydata = np.array(meas.ydata)
+            xdata = np.array(meas.xdata)
+
+            # Find all peaks
+            peak_indices, _ = find_peaks(ydata)
+
+            # Mask of samples above the interpolated limit
+            above_mask = ydata > interp_limit
+
+            highlight_x = []
+            highlight_y = []
+
+            i = 0
+            while i < len(ydata):
+                if above_mask[i]:
+                    # Start of a region
+                    region_indices = []
+                    while i < len(ydata) and above_mask[i]:
+                        region_indices.append(i)
+                        i += 1
+                    # Find peaks inside this region
+                    region_peaks = [p for p in peak_indices if p in region_indices]
+                    if region_peaks:
+                        # Pick the highest peak in this region
+                        best_peak = max(region_peaks, key=lambda p: ydata[p])
+                        highlight_x.append(xdata[best_peak])
+                        highlight_y.append(ydata[best_peak])
+                else:
+                    i += 1
+
+            # Plot only the selected peaks
+            self.exceedslimitplot = self.ax.scatter(highlight_x, highlight_y,
+                                                    color='red', marker='o', facecolors='none')
 
         # Plot graph to canvas
         self.canvas.draw()
