@@ -908,18 +908,6 @@ class PlotFrame(ttk_b.Frame):
 
         # After plotting meas.xdata, meas.ydata and drawing the limit plot:
         if hasattr(self, 'limit_plot') and self.limit_plot is not None:
-            limit_x = self.limit_plot.get_xdata()
-            limit_y = self.limit_plot.get_ydata()
-            interp_limit = np.interp(meas.xdata, limit_x, limit_y)
-            ydata = np.array(meas.ydata)
-            xdata = np.array(meas.xdata)
-
-            # Find all peaks
-            peak_indices, _ = find_peaks(ydata)
-
-            # Only keep peaks above the limit
-            peaks_above_limit = peak_indices[ydata[peak_indices] > interp_limit[peak_indices]]
-
             # Group contiguous indices into regions
             limit_x = self.limit_plot.get_xdata()
             limit_y = self.limit_plot.get_ydata()
