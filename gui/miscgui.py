@@ -30,7 +30,7 @@ from matplotlib.backend_bases import key_press_handler
 
 #Internal imports
 from utils.message import *
-from utils.reportgenerator import json_to_pdf
+from utils.reportgenerator import generate_report
 from config import LOCAL_IP
 
 from instruments import measurement
@@ -815,7 +815,7 @@ class PlotFrame(ttk_b.Frame):
             self.peakplot = self.ax.scatter(peakx, peaky, color='blue', marker='x')
             if len(qpeaky):
                 self.qpeakplot = self.ax.scatter(qpeakx, qpeaky, c='darkblue', marker='o')
-            print('peakplot:', self.peakplot)
+            #print('peakplot:', self.peakplot)
             self.canvas.draw()
 
     def setlimit(self, standardtemplate):
@@ -1128,7 +1128,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         with open(Path(self.vars['workdir']) / fname, 'w') as fout:
             fout.write(json.dumps(self.savedata, indent=4))
         pdf_path = json_path.with_suffix(".pdf")
-        json_to_pdf(json_path, pdf_path, figure=self.plotframe.fig)
+        generate_report(json_path, pdf_path, figure=self.plotframe.fig)
         return True
 
     @eventhandler((MSG.CONNECT,))
@@ -1138,7 +1138,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.instrument = instrumentclass()
         if self.instrument.connect(self.tb.ipaddressvar.get()):                
             self.tb.setstate(True)
-            print('connect succesful')
+            print('connect successful')
         else:
             print('connect failed')
         return True
@@ -1171,6 +1171,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
     @eventhandler((MSG.SETCORRECTION,))
     def onevent_setcorrectionfactor(self, evt, name, path):
         self.correctionpath = path
+        self.correctionname = name
         tmpl = load_template(path, _TEMPLATETYPE_CORRECTION)
         if tmpl is not None:            
             self.correctiontemplate = Measurement.modifycorrectiontemplate(tmpl[_CORRECTION_KEY])                    
@@ -1180,6 +1181,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
     @eventhandler((MSG.SETSTANDARD,))
     def onevent_setstandard(self, evt, name, path):
         self.standardpath = path
+        self.standardname = name
         tmpl = load_template(path, _TEMPLATETYPE_STANDARD)
         if tmpl is not None:            
             self.standardtemplate = Measurement.modifystandardtemplate(tmpl[_STANDARD_KEY])                    
@@ -1208,7 +1210,9 @@ class MeasureWindow(ttk_b.Window, EventHandler):
                     self.savedata['measurementconfig'] = meascfg                    
                     self.measurement.setconfig(meascfg)    
                     correction = (self.cfgview.get_correction())
-                    self.measurement.setcorrectiondata(correction)         
+                    self.measurement.setcorrectiondata(correction)
+                    self.savedata['correction_factor'] = self.correctionname
+                    self.savedata['standard_name'] = self.standardname
                     self.measurement.startmeasurement(msgqueue = self.msgqueue)
                     self.measstate = MeasurementState.RUNNING                         
                 else:

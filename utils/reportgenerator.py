@@ -12,7 +12,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 
-def json_to_pdf(json_path: Path, pdf_path: Path, figure=None):
+def generate_report(json_path: Path, pdf_path: Path, figure=None):
     with open(json_path, "r") as f:
         data = json.load(f)
 
@@ -33,10 +33,9 @@ def json_to_pdf(json_path: Path, pdf_path: Path, figure=None):
     c.setFont("Helvetica-Bold", 16)
     c.drawString(2 * cm, height - 2 * cm, f"Measurement Report: {data.get('name', 'N/A')}")
 
-    # Time + Comment
+    # Time
     c.setFont("Helvetica", 10)
     c.drawString(2 * cm, height - 3 * cm, f"Date: {formatted_time}")
-    c.drawString(2 * cm, height - 3.5 * cm, f"Comment: {data.get('comment', '')}")
 
     # EUT Config
     c.setFont("Helvetica-Bold", 12)
@@ -68,6 +67,22 @@ def json_to_pdf(json_path: Path, pdf_path: Path, figure=None):
         
         c.drawString(2.5 * cm, mc_y, f"{display_name}: {value}")
         mc_y -= 0.4 * cm
+
+    # Standard
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2 * cm, mc_y - 1 * cm, "Standard:")
+    c.setFont("Helvetica", 10)
+    bold_text_width = c.stringWidth("Standard:", "Helvetica-Bold", 10)
+    c.drawString(2 * cm + bold_text_width, mc_y - 1 * cm, f" {data.get('standard_name')}")
+    mc_y -= 0.5 * cm
+
+    # Correction factor
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2 * cm, mc_y - 1 * cm, "Correction factor:")
+    c.setFont("Helvetica", 10)
+    bold_text_width = c.stringWidth("Correction factor:", "Helvetica-Bold", 10)
+    c.drawString(2 * cm + bold_text_width, mc_y - 1 * cm, f" {data.get('correction_factor')}")
+    mc_y -= 1 * cm
 
     # Peaklist
     if data.get("peaklist", []):
