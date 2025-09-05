@@ -118,6 +118,8 @@ class Measurement():
     def __init__(self, instrument : InstrumentBase = None):
         self.meascfg = None
         self.instrument = instrument
+        self.total_submeasurements = 0
+        self.completed_submeasurements = 0
 
     @classmethod
     def modifytemplate(cls, inputtemplate: dict | None = None ) -> dict:
@@ -193,26 +195,43 @@ class Measurement():
         self.meascfg = self.defaultparams | self.meascfg
         self.createsubmeasurements()
 
+        self.total_submeasurements = len(self.submeaslist)
+        self.completed_submeasurements = 0
+
         for k,v in self.meascfg.items():
             if v != None:
                 #print('setting', k, v)
                 self.instrument.set(k,v)
         
-        for m in self.submeaslist:            
+        msgqueue.put((MSG.THREAD, THREADMSG.PROGRESS, 0))
+
+        for i, m in enumerate(self.submeaslist):            
+            if not self.runthread:
+                break
+
             self.instrument.set('fstart',m[0])
             self.instrument.set('fstop',m[1])
             self.instrument.set('tracemode', self.meascfg['tracemode'])
             sweeptime = self.instrument.get('sweeptime')
-            self.instrument.set('initiate',1)
+            self.instrument.set('initiate', 1)
+
             time.sleep(sweeptime * self.meascfg['sweepcount'] + 1)
             while(self.instrument.get('sweepcountcurrent') != self.meascfg['sweepcount']):
                 self.wait(sweeptime * self.meascfg['sweepcount'] + 1)
+
             self.ydataRaw.extend(self.instrument.get('data'))
             self.ydata = self.ydataRaw.copy()
             #self.ydata.extend(self.instrument.get('data'))
             self.createfrequencylist(m[1])
             self.applycorrection()
+
+            self.completed_submeasurements += 1
+            progress = (self.completed_submeasurements / self.total_submeasurements) * 100
+            msgqueue.put((MSG.THREAD, THREADMSG.PROGRESS, progress))
             msgqueue.put((MSG.THREAD,THREADMSG.DATA,None))
+
+        if self.runthread:
+            msgqueue.put((MSG.THREAD, THREADMSG.PROGRESS, 100))
         self.runthread = False
         msgqueue.put((MSG.THREAD,THREADMSG.DONE, None))
 
