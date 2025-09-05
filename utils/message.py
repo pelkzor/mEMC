@@ -25,6 +25,7 @@ class THREADMSG(IntEnum):
     TEXT = auto()
     DATA = auto()
     DONE = auto()
+    PROGRESS = auto()
 
 EVT_CONNECT = lambda : (MSG.CONNECT,)
 EVT_DISCONNECT = lambda : (MSG.CONNECT,)

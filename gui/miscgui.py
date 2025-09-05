@@ -203,6 +203,9 @@ class EntryFrame(ttk_b.Frame):
 
     def get(self):
         return self.sval.get()
+    
+    def set_state(self, state):
+        self.entry.config(state=state)
 
 class ValueField(DefaultGridField):
 
@@ -503,7 +506,6 @@ class ToolBar(ttk_b.Frame):
         ttk_b.Label(self, text='Instrument',width=16, anchor='e').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD,sticky='EW')
         
         self.instrumentvar = ttk_b.StringVar()
-        
         self.instrumentvar.trace_add('write', lambda *_: parent.onevent((MSG.SETVAR,'instrumentname',self.instrumentvar.get()))) 
         self.instrumentselect = ttk_b.Combobox(self, values=[i[0] for i in ilist], textvariable=self.instrumentvar, state='readonly', width=16)        
         self.instrumentselect.grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW') 
@@ -553,6 +555,15 @@ class ToolBar(ttk_b.Frame):
         self.workdirentry.grid(row=1, column=3, columnspan=2, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD, sticky='EW')
 
         self.loadtemplates()
+
+        self.config_comboboxes = [
+            self.instrumentselect,
+            self.mcfgselect,
+            self.eutcfgselect,
+            self.standardcfgselect,
+            self.correctioncfgselect,
+            self.workdirentry
+        ]
 
         if SIMULATOR_MODE:
             # select simulator instrument
@@ -635,6 +646,14 @@ class ToolBar(ttk_b.Frame):
         self.correctioncfgselect['values'] = [k for k in self.correctionfactors.keys()]
         self.standards = get_templates(_STANDARD_PATH, _TEMPLATETYPE_STANDARD)
         self.standardcfgselect['values'] = [k for k in self.standards.keys()]
+
+    def update_combobox_states(self, state):
+            if state == MeasurementState.RUNNING:
+                for cb in self.config_comboboxes:
+                    cb.config(state='disabled')
+            else:
+                for cb in self.config_comboboxes:
+                    cb.config(state='readonly')
 
 class EUTFrame(ttk_b.Frame):
     def __init__(self, parent):
@@ -782,12 +801,20 @@ class PlotFrame(ttk_b.Frame):
             self.treeview.delete(i)
         self.peaklist.sort(key = lambda x: x['freq'])
         for p in self.peaklist:
-            MHz = round(p['freq']/1000000,3)
+            MHz = f"{(p['freq'] / 1000000):.2f}"
+            qpk = f"{p['qpk']:.2f}" if p['qpk'] is not None else "Not measured"
+            limit = f"{p['limit']:.2f}" if p['limit'] is not None else "Not measured"
+            
             margin = None
-            if p['qpk'] is not None:
+            if p['qpk'] is not None and p['limit'] is not None:
                 margin = p['limit'] - p['qpk']
                 p['margin'] = margin
-            self.treeview.insert('',ttk_b.END, iid=p['iid'], values=(MHz, p['qpk'], p['limit'], margin, None))
+                margin = f"{margin:.2f}"
+            else:
+                margin = ""
+            
+            self.treeview.insert('', ttk_b.END, iid=p['iid'], 
+                                values=(MHz, qpk, limit, margin, None))
 
     def cleanpeakview(self):
         for i in self.treeview.get_children():
@@ -973,11 +1000,13 @@ class PlotFrame(ttk_b.Frame):
 
 class ConfigView(ttk_b.Frame):
 
-    def __init__(self, parent):
+    def __init__(self, parent, toolbar=None):
         super().__init__(parent)
         self.nb = ttk_b.Notebook(self, width=400)
         self.nb.onevent = lambda evt: parent.onevent(evt)   #make nb forward events
-        self.measureframe = MeasureFrame(self.nb)
+
+        self.toolbar = toolbar
+        self.measureframe = MeasureFrame(self.nb, self.toolbar)
         self.meascfgedit = ConfigEditor(self.nb, template=None)
         self.eutcfgedit = ConfigEditor(self.nb, template=None)
         self.correctionedit = ConfigEditor(self.nb, template=None)
@@ -1031,33 +1060,67 @@ class MeasurementState(IntEnum):
 
 class MeasureFrame(ttk_b.Frame):
     
-    def __init__(self, parent, plot_frame=None,):
+    def __init__(self, parent, toolbar, plot_frame=None,):
         super().__init__(parent)
-        #self.measname.trace_add('write', lambda *_: parent.onevent( ('setvar','measname',self.measname.get()))) #changed to validate function
-        
-        #ttk_b.Label(self, text='Measurement name').grid(row=0, column=0, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
-        #ttk_b.Entry(self, textvariable=self.measname, validate='focusout', validatecommand=lambda : parent.onevent((MSG.SETVAR,'measname',self.measname.get()))).grid(row=0, column=1, padx=_DEFAULT_PAD, pady=_DEFAULT_PAD)
+
+        self.toolbar = toolbar
         self.measname = EntryFrame(self, 'measname', 'Measurement Name', '', parent)
-        self.measname.pack()
+        self.measname.pack(pady=15)
 
         self.plot_frame = plot_frame
 
         self.measurebtn = ttk_b.Button(self, text='measure', command = lambda : parent.onevent((MSG.MEASURE,)))
-        self.measurebtn.pack()
-        #self.measurebtn = ttk_b.Button(self, text='Start Measurement', command = self.onbtn)
-        #self.measurebtn.grid(column=1, row=1)
+        self.measurebtn.pack(pady=10)
+
+        self.progress = ttk_b.Progressbar(self, mode='indeterminate', length=200)
+        self.progress_label = ttk_b.Label(self, text='')
+
         self.updatestate(MeasurementState.DISABLED)    
 
     def updatestate(self, state: MeasurementState):
         match state:
             case MeasurementState.DISABLED:                
                 self.measurebtn.config(text='Start Measurement', state='disabled')
+                self.measname.set_state('disabled')
+                self.hide_progress()
             case MeasurementState.READY:
                 self.measurebtn.config(text='Start Measurement', state='enabled')
+                self.measname.set_state('normal')
+                self.hide_progress()
             case MeasurementState.RUNNING:
                 self.measurebtn.config(text='Stop Measurement')
+                self.measname.set_state('disabled')
+                self.show_progress()
+                self.progress.config(mode='indeterminate')
+                self.progress.start(10)
             case MeasurementState.DONE:
                 self.measurebtn.config(text='Save Measurement')
+                self.measname.set_state('readonly')
+                self.hide_progress()
+
+        if hasattr(self.toolbar, 'update_combobox_states'):
+            self.toolbar.update_combobox_states(state)
+    
+    def show_progress(self):
+        if not self.progress.winfo_ismapped():
+            self.progress.pack(pady=15)
+            self.progress_label.pack()
+    
+    def hide_progress(self):
+        self.progress.stop()
+        if self.progress.winfo_ismapped():
+            self.progress.pack_forget()
+    
+    def update_progress(self, progress):
+        if self.progress['mode'] != 'determinate':
+            self.progress.config(mode='determinate', maximum=100)
+        
+        self.progress['value'] = progress
+        
+        if progress >= 100:
+            self.progress_label.config(text='Measurement complete!')
+        else:
+            self.progress_label.config(text=f'Measuring... {progress:.1f}%')
 
 class _MatchBreak(Exception): pass
 
@@ -1088,7 +1151,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         self.plotframe = PlotFrame(self)
         self.plotframe.grid(column=1, row=1, columnspan=3, rowspan=2,sticky='NSEW')
 
-        self.cfgview = ConfigView(self) 
+        self.cfgview = ConfigView(self, self.tb) 
         self.cfgview.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')        
         #self.rowconfigure(3, weight=1)
 
@@ -1276,6 +1339,9 @@ class MeasureWindow(ttk_b.Window, EventHandler):
     
     def processthreadmsg(self, type, data=None):
         if type == THREADMSG.DATA:
-            self.plotframe.plot(self.measurement,self.vars.get('measname',''))
-        if type == THREADMSG.DONE:
+            self.plotframe.plot(self.measurement, self.vars.get('measname',''))
+        elif type == THREADMSG.PROGRESS:
+            if hasattr(self.cfgview, 'measureframe') and hasattr(self.cfgview.measureframe, 'update_progress'):
+                self.cfgview.measureframe.update_progress(data)
+        elif type == THREADMSG.DONE:
             self.measstate = MeasurementState.DONE
