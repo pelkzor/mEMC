@@ -607,13 +607,14 @@ class ToolBar(ttk_b.Frame):
             self.workdir.set(sim_dir)
             self.workdirentry.configure(style='TEntry')
             self.parent.onevent((MSG.SETVAR,'workdir',sim_dir))
-
-        if defaultinstrument is not None:
-            try:
-                self.instrumentselect.current = [i[0] for i in ilist].index(defaultinstrument)
-                self.instrumentvar.set(defaultinstrument)
-            except:
-                self.instrumentselect.current = 0
+        
+        else:
+            results_dir = os.environ.get('WORKING_DIR')
+            if results_dir:
+                os.makedirs(results_dir, exist_ok=True)
+                self.workdir.set(results_dir)
+                self.workdirentry.configure(style='TEntry')
+                self.parent.onevent((MSG.SETVAR, 'workdir', results_dir))
 
     def selectworkdir(self, e):
         workdir = filedialog.askdirectory(initialdir='.', title='Select working directory')

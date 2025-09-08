@@ -4,6 +4,7 @@ from ttkbootstrap.tableview import Tableview
 
 from pathlib import Path
 import json
+import os
 
 class ResultTable(ttk_b.Frame):
 
@@ -40,10 +41,20 @@ class ResultTable(ttk_b.Frame):
             except:
                 continue
 
-    def loadfiles(self):
-        results_dir = Path('results')
-        # Create the directory if it doesn't exist
+    def get_results_directory(self):
+        working_dir = os.environ.get('WORKING_DIR')
+        
+        if working_dir:
+            results_dir = Path(working_dir)
+        else:
+            # Fall back to default "results" folder
+            results_dir = Path('results')
+            print("WORKING_DIR not set, using default 'results' folder")
         results_dir.mkdir(exist_ok=True)
+        return results_dir
+
+    def loadfiles(self):
+        results_dir = self.get_results_directory()
         filenames = list(results_dir.glob('*.json'))
         rows = []
         for name in filenames:

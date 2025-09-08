@@ -6,23 +6,23 @@
 
 #### Python Packages
 
-The required Python packages for this application are listed in the file `requires.txt`. To install these packages, run:
+The required Python packages for this application are listed in the file `pyproject.toml`. To install these packages, run:
 
 ```bash
 # Switch to / install Python 3.12 first
-python -m venv .venv
-pip install -r requires.txt
+pip install uv
+uv sync
 ```
 
-Pip will download and install each package in `requires.txt` and its dependencies.
+Pip along with uv will download and install each package in `pyproject.toml` and its dependencies.
 
 ### Environment Variables
 For the application to work properly regardless of where it is ran from, environment variables must be set up. A `.env` file has to be created in the root of the repository in. Populate it with the following:
 ```bash
 # In .env
 IP_ADDRESS=IP_OF_LOCAL_MACHINE
-#To preselect all comboboxes and the simulator instrument on start for quicker debug cycles
-SIMULATOR_MODE=TRUE
+SIMULATOR_MODE=TRUE # To preselect all comboboxes and the simulator instrument on start for quicker debug cycles
+WORKING_DIR=PATH_TO_WORKING_DIR
 ```
 
 ## Usage
@@ -34,8 +34,8 @@ python -m main
 ```
 
 ## Continuous development
-If more packages are installed during development, `requires.txt` needs to be updated. Run the command below to update the file:
+If more packages are installed during development, `pyproject.toml` needs to be updated. Run the command below to update the file:
 
 ```bash
-pip freeze > requires.txt
+uv add <package-name>
 ```
