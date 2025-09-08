@@ -928,11 +928,11 @@ class PlotFrame(ttk_b.Frame):
             )
             sel.annotation.arrow_patch.set(
                 arrowstyle="simple",
-                  fc="orange",
-                  ec="orange",
-                  alpha=0.9,
-                  connectionstyle="arc3,rad=0.2"
-                  )
+                fc="orange",
+                ec="orange",
+                alpha=0.9,
+                connectionstyle="arc3,rad=0.2"
+            )
 
         # After plotting meas.xdata, meas.ydata and drawing the limit plot:
         if hasattr(self, 'limit_plot') and self.limit_plot is not None:
