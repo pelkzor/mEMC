@@ -1006,8 +1006,14 @@ class ConfigView(ttk_b.Frame):
         self.nb = ttk_b.Notebook(self, width=400)
         self.nb.onevent = lambda evt: parent.onevent(evt)   #make nb forward events
 
+        self.tab_indices = {
+            'measure': 0,
+            'eut_config': 1,
+            'meas_config': 2
+        }
+
         self.toolbar = toolbar
-        self.measureframe = MeasureFrame(self.nb, self.toolbar)
+        self.measureframe = MeasureFrame(self.nb, self.toolbar, notebook=self.nb)
         self.meascfgedit = ConfigEditor(self.nb, template=None)
         self.eutcfgedit = ConfigEditor(self.nb, template=None)
         self.correctionedit = ConfigEditor(self.nb, template=None)
@@ -1015,7 +1021,6 @@ class ConfigView(ttk_b.Frame):
         self.nb.add(self.measureframe, text='Measure')
         self.nb.add(self.eutcfgedit, text='EUT config')
         self.nb.add(self.meascfgedit, text='Measurement config')
-        #self.nb.grid(column=0, row=1, rowspan=2, padx=10, pady=10, sticky='NSEW')
         self.nb.pack(expand=True, fill='both')
         self.columnconfigure(1,weight=1)
 
@@ -1061,7 +1066,7 @@ class MeasurementState(IntEnum):
 
 class MeasureFrame(ttk_b.Frame):
     
-    def __init__(self, parent, toolbar, plot_frame=None,):
+    def __init__(self, parent, toolbar, notebook=None, plot_frame=None):
         super().__init__(parent)
 
         self.toolbar = toolbar
@@ -1069,6 +1074,8 @@ class MeasureFrame(ttk_b.Frame):
         self.measname.pack(pady=15)
 
         self.plot_frame = plot_frame
+
+        self.notebook = notebook
 
         self.measurebtn = ttk_b.Button(self, text='measure', command = lambda : parent.onevent((MSG.MEASURE,)))
         self.measurebtn.pack(pady=10)
@@ -1094,10 +1101,14 @@ class MeasureFrame(ttk_b.Frame):
                 self.show_progress()
                 self.progress.config(mode='indeterminate')
                 self.progress.start(10)
+                if self.notebook:
+                    self.notebook.tab(2, state='disabled') # Index 2 is the third tab (measurement state)
             case MeasurementState.DONE:
                 self.measurebtn.config(text='Save Measurement')
                 self.measname.set_state('readonly')
                 self.hide_progress()
+                if self.notebook:
+                    self.notebook.tab(2, state='normal')
 
         if hasattr(self.toolbar, 'update_combobox_states'):
             self.toolbar.update_combobox_states(state)
@@ -1244,10 +1255,11 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         return True
     
     @eventhandler((MSG.DISCONNECT,))
-    def onevent_disconnect(self, evt):
+    def onevent_disconnect(self, evt, *args, **kwargs):
         self.instrument.disconnect()
         self.instrument = None
         self.tb.setstate(False)
+        print("disconnect successful")
         return True
     
     @eventhandler((MSG.SETMEASTEMPLATE,))
