@@ -23,9 +23,9 @@ For the application to work properly regardless of where it is ran from, environ
 # Instrument IP
 IP_ADDRESS=192.168.0.1
 # To preselect all comboboxes and the simulator instrument on start for quicker debug cycles
-SIMULATOR_MODE=TRUE
+SIMULATOR_MODE=True
 # Default folder where the application will save the results
-WORKING_DIR=PATH_TO_WORKING_DIR
+WORKING_DIR=C:\path\to\folder
 ```
 
 ## Usage
