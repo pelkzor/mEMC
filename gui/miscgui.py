@@ -791,22 +791,19 @@ class PlotFrame(ttk_b.Frame):
             Messagebox.show_info("No peaks to measure", "Add some peaks to the list first")
             return
         
-        # Count how many peaks need measurement
         peaks_to_measure = [p for p in self.peaklist if p['qpk'] is None]
         if not peaks_to_measure:
             Messagebox.show_info("All peaks already have QP values", "All peaks measured")
             return
         
-        # Disable buttons during measurement
         self.btnmeasureqp.config(state='disabled')
         self.btnmeasureall.config(state='disabled')
         
-        # Create a simple progress window (optional)
         progress_window = tk.Toplevel(self)
         progress_window.title("Measuring QP Values")
         progress_window.geometry("400x150")
-        progress_window.transient(self)  # Make it modal
-        progress_window.grab_set()  # Grab focus
+        progress_window.transient(self)
+        progress_window.grab_set()
             
         progress_label = ttk_b.Label(progress_window, text=f"Measuring 1 of {len(peaks_to_measure)}...")
         progress_label.pack(pady=10)
@@ -824,10 +821,10 @@ class PlotFrame(ttk_b.Frame):
                 
                 self.updatepeakview()
                 self.plotpeaks()
-                self.update()  # Force UI update
+                self.update()
             
             progress_label.config(text="Measurement complete!")
-            progress_window.after(1000, progress_window.destroy)  # Close after 1 second
+            progress_window.after(1000, progress_window.destroy)
             
         except Exception as e:
             progress_window.destroy()
@@ -835,7 +832,6 @@ class PlotFrame(ttk_b.Frame):
             print(f"Error in measure_all_qp: {e}")
         
         finally:
-            # Re-enable buttons
             self.btnmeasureqp.config(state='normal')
             self.btnmeasureall.config(state='normal')
 
@@ -843,7 +839,6 @@ class PlotFrame(ttk_b.Frame):
         if self.point is not None:
             iid = str(round(self.point[0]/1000000,3))
             limit_val = None
-            # Calculate limit and margin for this frequency if limit_plot exists
             if hasattr(self, 'limit_plot') and self.limit_plot is not None:
                 limit_x = self.limit_plot.get_xdata()
                 limit_y = self.limit_plot.get_ydata()
