@@ -13,6 +13,8 @@ class MSG(IntEnum):
     SETCORRECTION = auto()
     SETSTANDARD = auto()
     MEASURE = auto()
+    STOP = auto()
+    CANCEL = auto() 
     SETVAR = auto()
     LOG = auto()
     THREAD = auto()
@@ -26,6 +28,7 @@ class THREADMSG(IntEnum):
     DATA = auto()
     DONE = auto()
     PROGRESS = auto()
+    CANCELLED = auto()
 
 EVT_CONNECT = lambda : (MSG.CONNECT,)
 EVT_DISCONNECT = lambda : (MSG.CONNECT,)

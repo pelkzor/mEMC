@@ -718,7 +718,14 @@ class PlotFrame(ttk_b.Frame):
         self.tvscroll.pack(side='left', fill='y')
         self.treeview.config(yscrollcommand=self.tvscroll.set)
 
-        self.btnmeasureqp = ttk_b.Button(self, text='Measure selected QP', command=self.measureqp, width=20)
+        self.button_frame = ttk_b.Frame(self)
+        self.button_frame.grid(row=4, column=0, padx=5, pady=5, sticky='w')
+
+        self.btnmeasureqp = ttk_b.Button(self.button_frame, text='Measure selected QP', command=self.measureqp, width=20)
+        self.btnmeasureqp.pack(side='left', padx=(0, 5))
+
+        self.btnmeasureall = ttk_b.Button(self.button_frame, text='Measure all QP', command=self.measure_all_qp, width=20)
+        self.btnmeasureall.pack(side='left')
 
         # Grid layout, more weight = more space in height
         self.grid_rowconfigure(0, weight=3)  # Canvas gets most space
@@ -733,7 +740,7 @@ class PlotFrame(ttk_b.Frame):
         toolbar.grid(row=1, column=0, sticky='ew', padx=5)
         self.pointframe.grid(row=2, column=0, sticky='ew', padx=5, pady=5)
         self.tvframe.grid(row=3, column=0, sticky='w', padx=5, pady=5)
-        self.btnmeasureqp.grid(row=4, column=0, padx=5, pady=5, sticky='w')
+        self.button_frame.grid(row=4, column=0, padx=5, pady=5, sticky='w')
 
         # Minimum sizes to prevent widgets from becoming too small
         self.tvframe.config(width=400, height=200)
@@ -773,6 +780,64 @@ class PlotFrame(ttk_b.Frame):
             self.plotpeaks()
             # Debugging print
             # print(f"After measureqp, peaklist: {self.peaklist}")
+    
+    def measure_all_qp(self):
+        """Measure QP values for all peaks in the list"""
+        if self.measurement is None:
+            Messagebox.show_warning("No measurement available", "Please perform a measurement first")
+            return
+        
+        if not self.peaklist:
+            Messagebox.show_info("No peaks to measure", "Add some peaks to the list first")
+            return
+        
+        # Count how many peaks need measurement
+        peaks_to_measure = [p for p in self.peaklist if p['qpk'] is None]
+        if not peaks_to_measure:
+            Messagebox.show_info("All peaks already have QP values", "All peaks measured")
+            return
+        
+        # Disable buttons during measurement
+        self.btnmeasureqp.config(state='disabled')
+        self.btnmeasureall.config(state='disabled')
+        
+        # Create a simple progress window (optional)
+        progress_window = tk.Toplevel(self)
+        progress_window.title("Measuring QP Values")
+        progress_window.geometry("400x150")
+        progress_window.transient(self)  # Make it modal
+        progress_window.grab_set()  # Grab focus
+            
+        progress_label = ttk_b.Label(progress_window, text=f"Measuring 1 of {len(peaks_to_measure)}...")
+        progress_label.pack(pady=10)
+        
+        progress_bar = ttk_b.Progressbar(progress_window, mode='determinate', maximum=len(peaks_to_measure))
+        progress_bar.pack(pady=10, padx=20, fill='x')
+        
+        try:
+            for i, peak in enumerate(peaks_to_measure, 1):
+                progress_label.config(text=f"Measuring {i} of {len(peaks_to_measure)}...")
+                progress_bar['value'] = i
+                
+                print(f"Measuring QP for frequency: {peak['freq']/1e6:.2f} MHz")
+                peak['qpk'] = self.measurement.measureqp_thread(peak['freq'])
+                
+                self.updatepeakview()
+                self.plotpeaks()
+                self.update()  # Force UI update
+            
+            progress_label.config(text="Measurement complete!")
+            progress_window.after(1000, progress_window.destroy)  # Close after 1 second
+            
+        except Exception as e:
+            progress_window.destroy()
+            Messagebox.show_error(f"Error during measurement: {str(e)}", "Measurement failed")
+            print(f"Error in measure_all_qp: {e}")
+        
+        finally:
+            # Re-enable buttons
+            self.btnmeasureqp.config(state='normal')
+            self.btnmeasureall.config(state='normal')
 
     def onaddpoint(self):
         if self.point is not None:
@@ -868,7 +933,6 @@ class PlotFrame(ttk_b.Frame):
         self.add_limit(frequencies, limits)           
 
     def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,125)):        
-        
         if self.measurement is None:
             self.measurement = meas
 
@@ -999,6 +1063,39 @@ class PlotFrame(ttk_b.Frame):
         if event.button == 3:
             self.on_right_click(event)
 
+    def clear_plot(self):
+        self.ax.clear()
+        
+        self.ax.set_xlabel('Frequency [Hz]')
+        self.ax.set_ylabel('dBµV')
+        self.ax.set_xlim((0, 1_000_000_000))
+        self.ax.set_ylim((0, 125))
+        self.ax.grid()
+        
+        if hasattr(self, 'limit_plot') and self.limit_plot is not None:
+            self.limit_plot.remove()
+            self.limit_plot = None
+        
+        if hasattr(self, 'exceedslimitplot') and self.exceedslimitplot is not None:
+            self.exceedslimitplot.remove()
+            self.exceedslimitplot = None
+        
+        if hasattr(self, 'peakplot') and self.peakplot is not None:
+            self.peakplot.remove()
+            self.peakplot = None
+        
+        if hasattr(self, 'qpeakplot') and self.qpeakplot is not None:
+            self.qpeakplot.remove()
+            self.qpeakplot = None
+        
+        if hasattr(self, 'cursor') and self.cursor is not None:
+            self.cursor.remove()
+            self.cursor = None
+        
+        self.measurement = None
+        self.cleanpeakview()
+        self.canvas.draw()
+
 class ConfigView(ttk_b.Frame):
 
     def __init__(self, parent, toolbar=None):
@@ -1077,13 +1174,19 @@ class MeasureFrame(ttk_b.Frame):
 
         self.notebook = notebook
 
-        self.measurebtn = ttk_b.Button(self, text='measure', command = lambda : parent.onevent((MSG.MEASURE,)))
-        self.measurebtn.pack(pady=10)
+        self.button_frame = ttk_b.Frame(self)
+        self.button_frame.pack(pady=10)
+
+        self.measurebtn = ttk_b.Button(self.button_frame, text='measure', command=lambda: parent.onevent((MSG.MEASURE,)))
+        self.measurebtn.pack(side='left', padx=5)
+
+        self.cancelbtn = ttk_b.Button(self.button_frame, text='Cancel', command=lambda: parent.onevent((MSG.CANCEL,)))
+        self.cancelbtn.pack(side='left', padx=5)
 
         self.progress = ttk_b.Progressbar(self, mode='indeterminate', length=200)
         self.progress_label = ttk_b.Label(self, text='')
 
-        self.updatestate(MeasurementState.DISABLED)    
+        self.updatestate(MeasurementState.DISABLED)
 
     def updatestate(self, state: MeasurementState):
         match state:
@@ -1091,22 +1194,26 @@ class MeasureFrame(ttk_b.Frame):
                 self.measurebtn.config(text='Start Measurement', state='disabled')
                 self.measname.set_state('disabled')
                 self.hide_progress()
+                self.cancelbtn.pack_forget()
             case MeasurementState.READY:
                 self.measurebtn.config(text='Start Measurement', state='enabled')
                 self.measname.set_state('normal')
                 self.hide_progress()
+                self.cancelbtn.pack_forget()
             case MeasurementState.RUNNING:
                 self.measurebtn.config(text='Stop Measurement')
                 self.measname.set_state('disabled')
                 self.show_progress()
                 self.progress.config(mode='indeterminate')
                 self.progress.start(10)
+                self.cancelbtn.pack_forget()
                 if self.notebook:
                     self.notebook.tab(2, state='disabled') # Index 2 is the third tab (measurement state)
             case MeasurementState.DONE:
                 self.measurebtn.config(text='Save Measurement')
                 self.measname.set_state('readonly')
                 self.hide_progress()
+                self.cancelbtn.pack(side='left', padx=5) # Show cancel button
                 if self.notebook:
                     self.notebook.tab(2, state='normal')
 
@@ -1122,17 +1229,14 @@ class MeasureFrame(ttk_b.Frame):
         self.progress.stop()
         if self.progress.winfo_ismapped():
             self.progress.pack_forget()
+            self.progress_label.pack_forget()
     
     def update_progress(self, progress):
         if self.progress['mode'] != 'determinate':
             self.progress.config(mode='determinate', maximum=100)
         
         self.progress['value'] = progress
-        
-        if progress >= 100:
-            self.progress_label.config(text='Measurement complete!')
-        else:
-            self.progress_label.config(text=f'Measuring... {progress:.1f}%')
+        self.progress_label.config(text=f'Measuring... {progress:.1f}%')
 
 class _MatchBreak(Exception): pass
 
@@ -1329,10 +1433,27 @@ class MeasureWindow(ttk_b.Window, EventHandler):
                     self.measstate = MeasurementState.RUNNING                         
                 else:
                     Messagebox.show_error('Some of the values in EUT config or Measurement config\nare invalid', title='Error', alert=True, parent=self)
+
+            case MeasurementState.RUNNING:
+                self.measurement.stopmeasurement()
+                self.cfgview.measureframe.progress_label.config(text="Stopping...")
             case MeasurementState.DONE:
                 self.measstate = MeasurementState.READY
                 self.savemeasurement()
+                self.cfgview.measureframe.progress_label.config(text="Measurement saved")
                 self.result_browser.refresh_results()
+        return True
+    
+    @eventhandler((MSG.CANCEL,))
+    def onevent_cancel(self, evt, *args):
+        self.cfgview.measureframe.progress_label.pack_forget()
+        if self.measstate == MeasurementState.DONE:
+            self.measstate = MeasurementState.READY
+            self.measurement = None
+            if hasattr(self.cfgview, 'measureframe'):
+                self.cfgview.measureframe.updatestate(MeasurementState.READY)
+            if hasattr(self, 'plotframe'):
+                self.plotframe.clear_plot()
         return True
     
     @eventhandler((MSG.LOG,))
@@ -1348,7 +1469,7 @@ class MeasureWindow(ttk_b.Window, EventHandler):
     @eventhandler((MSG.THREAD,))
     def onevent_threadmsg(self, evt, msgtype, data):
         self.processthreadmsg(msgtype, data)
-        return True        
+        return True  
     
     def processthreadmsg(self, type, data=None):
         if type == THREADMSG.DATA:
@@ -1358,3 +1479,9 @@ class MeasureWindow(ttk_b.Window, EventHandler):
                 self.cfgview.measureframe.update_progress(data)
         elif type == THREADMSG.DONE:
             self.measstate = MeasurementState.DONE
+            if hasattr(self.cfgview, 'measureframe'):
+                self.cfgview.measureframe.updatestate(MeasurementState.DONE)
+        elif type == THREADMSG.CANCELLED:  # Handle cancellation from measurement thread
+            self.measstate = MeasurementState.READY
+            if hasattr(self.cfgview, 'measureframe'):
+                self.cfgview.measureframe.updatestate(MeasurementState.READY)
