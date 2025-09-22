@@ -20,9 +20,12 @@ Pip along with uv will download and install each package in `pyproject.toml` and
 For the application to work properly regardless of where it is ran from, environment variables must be set up. A `.env` file has to be created in the root of the repository in. Populate it with the following:
 ```bash
 # In .env
-IP_ADDRESS=IP_OF_LOCAL_MACHINE
-SIMULATOR_MODE=TRUE # To preselect all comboboxes and the simulator instrument on start for quicker debug cycles
-WORKING_DIR=PATH_TO_WORKING_DIR
+# Instrument IP
+IP_ADDRESS=192.168.0.1
+# To preselect all comboboxes and the simulator instrument on start for quicker debug cycles
+SIMULATOR_MODE=True
+# Default folder where the application will save the results
+WORKING_DIR=C:\path\to\folder
 ```
 
 ## Usage
@@ -30,7 +33,7 @@ With the packages installed and the environment variable(s) set up, run:
 
 ```bash
 # From root/
-python -m main
+uv run main.py
 ```
 
 ## Continuous development
