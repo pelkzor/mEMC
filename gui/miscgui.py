@@ -671,9 +671,7 @@ class PlotFrame(ttk_b.Frame):
 
         self.ax = self.fig.add_subplot()
         # Create a Matplotlib figure and plot        
-        # log = True
-        # if log:
-        #     self.ax.set_xscale("log")       
+        self.ax.set_xscale("log")       
         xlim=(0,1_000_000_000)
         ylim=(0,125)
         # uncomment to add padding to x axis
@@ -683,6 +681,7 @@ class PlotFrame(ttk_b.Frame):
         self.ax.set_ylim(ylim)
         self.ax.set_xlabel('Frequency [Hz]')
         self.ax.set_ylabel('dBµV')
+        self.apply_frequency_ticks(xlim)
         self.ax.grid()
         
         # Create a canvas and add the figure to it
@@ -952,20 +951,25 @@ class PlotFrame(ttk_b.Frame):
         if meas.meascfg is not None:
             xlim = meas.meascfg['fstart'], meas.meascfg['fstop']
 
-
-        # Add some padding to the min and max x values to improve readability
-        # x_padding = (xlim[0]+xlim[1]) * 0.01
-        # xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
+        self.ax.set_xscale("log")       
         self.ax.set_xlim(xlim)
+        self.apply_frequency_ticks(xlim) 
+
+        # tick_values = [30e6, 40e6, 50e6, 60e6, 70e6, 80e6, 100e6, 200e6]
+        # self.ax.xaxis.set_major_locator(ticker.FixedLocator(tick_values))
+        # self.ax.xaxis.set_major_formatter(
+        #     ticker.FuncFormatter(lambda value, _: f"{value/1e6:.0f}M")
+        # )
+
         self.ax.grid()
 
 
-        mkfunc = lambda x, pos: '%.1f G' % (x * 1e-9) if x >= 1e9 else '%3.1f M' % (x * 1e-6) if x >= 1e6 else '%3.1f k' % (x * 1e-3)
-        mkformatter = ticker.FuncFormatter(mkfunc)
-        self.ax.xaxis.set_major_formatter(mkformatter)
+        # mkfunc = lambda x, pos: '%.1f G' % (x * 1e-9) if x >= 1e9 else '%3.1f M' % (x * 1e-6) if x >= 1e6 else '%3.1f k' % (x * 1e-3)
+        # mkformatter = ticker.FuncFormatter(mkfunc)
+        # self.ax.xaxis.set_major_formatter(mkformatter)
 
         line = self.ax.plot(meas.xdata, meas.ydata, linewidth=0.5)
-        self.ax.xaxis.set_major_locator(LinearLocator(numticks=6))
+        #self.ax.xaxis.set_major_locator(LinearLocator(numticks=6))
 
         self.drawlimitplot()
 
@@ -1037,6 +1041,45 @@ class PlotFrame(ttk_b.Frame):
         # Plot graph to canvas
         self.canvas.draw()
     
+    def apply_frequency_ticks(self, xlim):
+        xmin, xmax = xlim
+        if xmin <= 0 or xmax <= 0 or xmin >= xmax:
+            return
+        ticks = self.generate_log_ticks(xmin, xmax)
+        if not ticks:
+            return
+        self.ax.xaxis.set_major_locator(ticker.FixedLocator(ticks))
+        self.ax.xaxis.set_major_formatter(
+            ticker.FuncFormatter(self.format_frequency)
+        )
+
+    @staticmethod
+    def generate_log_ticks(xmin, xmax):
+        preferred = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=float)
+        exp_min = int(np.floor(np.log10(xmin)))
+        exp_max = int(np.ceil(np.log10(xmax)))
+        ticks = []
+        for exp in range(exp_min, exp_max + 1):
+            decade = 10 ** exp
+            for coeff in preferred:
+                tick = coeff * decade
+                if tick < xmin or tick > xmax:
+                    continue
+                if ticks and np.isclose(ticks[-1], tick):
+                    continue
+                ticks.append(tick)
+        return ticks
+
+    @staticmethod
+    def format_frequency(value, _pos=None):
+        if value >= 1e9:
+            return f"{value / 1e9:.0f}G"
+        if value >= 1e6:
+            return f"{value / 1e6:.0f}M"
+        if value >= 1e3:
+            return f"{value / 1e3:.0f}k"
+        return f"{value:.0f}"
+
     def onpointselect(self, evt):
         self.point = (evt.target[0], evt.target[1])
         self.pointentryf.config(state = 'normal')
