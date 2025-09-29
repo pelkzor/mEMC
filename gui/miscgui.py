@@ -794,18 +794,36 @@ class PlotFrame(ttk_b.Frame):
         self.btnmeasureqp.config(state='disabled')
         self.btnmeasureall.config(state='disabled')
         
+        # Create progress window
         progress_window = tk.Toplevel(self)
         progress_window.title("Measuring QP Values")
-        progress_window.geometry("400x150")
+        parent_x = self.winfo_toplevel().winfo_rootx()
+        parent_y = self.winfo_toplevel().winfo_rooty() 
+        parent_w = self.winfo_toplevel().winfo_width()
+        parent_h = self.winfo_toplevel().winfo_height()
+
+        progress_w = parent_w * 0.8
+        progress_h = parent_h * 0.8
+        progress_size_str = f"{int(progress_w)}x{int(progress_h)}"
+        progress_window.geometry(progress_size_str)
+        # Center the progress window over the parent
+        progress_window.update_idletasks()
+
+        window_w = progress_window.winfo_width()
+        window_h = progress_window.winfo_height()
+        pos_x = parent_x + (parent_w - window_w) // 2
+        pos_y = parent_y + (parent_h - window_h) // 2
+        progress_window.geometry(f"{progress_size_str}+{pos_x}+{pos_y}")
+
         progress_window.transient(self)
         progress_window.grab_set()
-            
+        
         progress_label = ttk_b.Label(progress_window, text=f"Measuring 1 of {len(peaks_to_measure)}...")
         progress_label.pack(pady=10)
         
         progress_bar = ttk_b.Progressbar(progress_window, mode='determinate', maximum=len(peaks_to_measure))
         progress_bar.pack(pady=10, padx=20, fill='x')
-        
+        self.update()
         try:
             for i, peak in enumerate(peaks_to_measure, 1):
                 progress_label.config(text=f"Measuring {i} of {len(peaks_to_measure)}...")
