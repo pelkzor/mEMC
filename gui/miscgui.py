@@ -671,12 +671,8 @@ class PlotFrame(ttk_b.Frame):
 
         self.ax = self.fig.add_subplot()
         # Create a Matplotlib figure and plot        
-        self.ax.set_xscale("log")       
         xlim=(0,1_000_000_000)
         ylim=(0,125)
-        # uncomment to add padding to x axis
-        # x_padding = (xlim[0]+xlim[1]) * 0.01
-        # xlim = (xlim[0] - x_padding, xlim[1] + x_padding)
         self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
         self.ax.set_xlabel('Frequency [Hz]')
@@ -939,13 +935,16 @@ class PlotFrame(ttk_b.Frame):
         if hasattr(self,'qpeakplot') and self.qpeakplot is not None:
                 self.qpeakplot.remove()
         # Clear the canvas before drawing the plot
-        self.ax.clear()        
+        self.ax.clear()
+        # Remove all existing cursor selections to stop ghosts from appearing!
+        if hasattr(self, 'cursor') and self.cursor is not None:
+            for sel in self.cursor.selections:
+                self.cursor.remove_selection(sel)
+        self.canvas.draw()
        
         self.ax.set_title(title)
         self.ax.set_xlabel('Frequency [Hz]')
         self.ax.set_ylabel('dBµV')
-
-        #self.fig.text(0.01,0.95,'notes:')
         self.ax.set_ylim(ylim)
         # Load x limits from measurement config
         if meas.meascfg is not None:
@@ -954,23 +953,9 @@ class PlotFrame(ttk_b.Frame):
         self.ax.set_xscale("log")       
         self.ax.set_xlim(xlim)
         self.apply_frequency_ticks(xlim) 
-
-        # tick_values = [30e6, 40e6, 50e6, 60e6, 70e6, 80e6, 100e6, 200e6]
-        # self.ax.xaxis.set_major_locator(ticker.FixedLocator(tick_values))
-        # self.ax.xaxis.set_major_formatter(
-        #     ticker.FuncFormatter(lambda value, _: f"{value/1e6:.0f}M")
-        # )
-
         self.ax.grid()
 
-
-        # mkfunc = lambda x, pos: '%.1f G' % (x * 1e-9) if x >= 1e9 else '%3.1f M' % (x * 1e-6) if x >= 1e6 else '%3.1f k' % (x * 1e-3)
-        # mkformatter = ticker.FuncFormatter(mkfunc)
-        # self.ax.xaxis.set_major_formatter(mkformatter)
-
         line = self.ax.plot(meas.xdata, meas.ydata, linewidth=0.5)
-        #self.ax.xaxis.set_major_locator(LinearLocator(numticks=6))
-
         self.drawlimitplot()
 
         self.cursor = mplcursors.cursor(line)
@@ -1103,11 +1088,13 @@ class PlotFrame(ttk_b.Frame):
 
     def clear_plot(self):
         self.ax.clear()
-        
+        xlim = (0, 1_000_000_000)
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim((0, 125))
         self.ax.set_xlabel('Frequency [Hz]')
         self.ax.set_ylabel('dBµV')
-        self.ax.set_xlim((0, 1_000_000_000))
-        self.ax.set_ylim((0, 125))
+        self.apply_frequency_ticks(xlim)
+
         self.ax.grid()
         
         if hasattr(self, 'limit_plot') and self.limit_plot is not None:
