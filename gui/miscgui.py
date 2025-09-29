@@ -793,22 +793,40 @@ class PlotFrame(ttk_b.Frame):
         
         self.btnmeasureqp.config(state='disabled')
         self.btnmeasureall.config(state='disabled')
-        
-        # Create progress window
-        progress_window = tk.Toplevel(self)
-        progress_window.title("Measuring QP Values")
-        parent_x = self.winfo_toplevel().winfo_rootx()
-        parent_y = self.winfo_toplevel().winfo_rooty() 
-        parent_w = self.winfo_toplevel().winfo_width()
-        parent_h = self.winfo_toplevel().winfo_height()
 
+        # Create a semi-transparent overlay to disable interaction with the main window
+        parent = self.winfo_toplevel()
+        parent.update_idletasks()
+
+        overlay = tk.Toplevel(parent)
+        overlay.overrideredirect(True)
+        overlay.attributes("-alpha", 0.6)
+        overlay.configure(bg="gray60")
+        overlay.geometry(
+            f"{parent.winfo_width()}x{parent.winfo_height()}"
+            f"+{parent.winfo_rootx()}+{parent.winfo_rooty()}"
+        )
+        overlay.lift(parent)
+        parent.attributes("-disabled", True)
+
+        # Create progress window
+        progress_window = tk.Toplevel(parent)
+        progress_window.overrideredirect(True)
+        progress_window.transient(parent)
+        progress_window.grab_set()
+        progress_window.lift(overlay)
+        progress_window.title("Measuring QP Values")
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty() 
+        parent_w = parent.winfo_width()
+        parent_h = parent.winfo_height()
+        
+        # Center the progress window over the parent
         progress_w = parent_w * 0.8
-        progress_h = parent_h * 0.8
+        progress_h = parent_h * 0.1
         progress_size_str = f"{int(progress_w)}x{int(progress_h)}"
         progress_window.geometry(progress_size_str)
-        # Center the progress window over the parent
         progress_window.update_idletasks()
-
         window_w = progress_window.winfo_width()
         window_h = progress_window.winfo_height()
         pos_x = parent_x + (parent_w - window_w) // 2
@@ -820,9 +838,17 @@ class PlotFrame(ttk_b.Frame):
         
         progress_label = ttk_b.Label(progress_window, text=f"Measuring 1 of {len(peaks_to_measure)}...")
         progress_label.pack(pady=10)
+       
+        style = ttk_b.Style()
+        style.configure("measure.Horizontal.TProgressbar", thickness=progress_window.winfo_height() * 0.4)
+        progress_bar = ttk_b.Progressbar(
+            progress_window,
+            mode='determinate',
+            maximum=len(peaks_to_measure),
+            style="measure.Horizontal.TProgressbar"
+        )
         
-        progress_bar = ttk_b.Progressbar(progress_window, mode='determinate', maximum=len(peaks_to_measure))
-        progress_bar.pack(pady=10, padx=20, fill='x')
+        progress_bar.pack(pady=10, padx=20, fill='both')
         self.update()
         try:
             for i, peak in enumerate(peaks_to_measure, 1):
@@ -847,6 +873,9 @@ class PlotFrame(ttk_b.Frame):
         finally:
             self.btnmeasureqp.config(state='normal')
             self.btnmeasureall.config(state='normal')
+            parent.attributes("-disabled", False)
+            overlay.destroy()
+            progress_window.destroy()
 
     def onaddpoint(self):
         if self.point is not None:
