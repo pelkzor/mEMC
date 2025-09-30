@@ -40,6 +40,7 @@ def exitapp():
 
 # Generate GUI window
 window = MeasureWindow(themename = theme["default"])
+window.state('zoomed')
 window.title('mEMC Test')
 
 screen_width = window.winfo_screenwidth()
