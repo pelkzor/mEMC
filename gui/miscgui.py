@@ -836,11 +836,13 @@ class PlotFrame(ttk_b.Frame):
         progress_window.transient(self)
         progress_window.grab_set()
         
-        progress_label = ttk_b.Label(progress_window, text=f"Measuring 1 of {len(peaks_to_measure)}...")
+        progress_label = ttk_b.Label(progress_window, 
+                                     text=f"Measuring 1 of {len(peaks_to_measure)}...")
         progress_label.pack(pady=10)
        
         style = ttk_b.Style()
-        style.configure("measure.Horizontal.TProgressbar", thickness=progress_window.winfo_height() * 0.4)
+        style.configure("measure.Horizontal.TProgressbar",
+                         thickness=progress_window.winfo_height() * 0.4)
         progress_bar = ttk_b.Progressbar(
             progress_window,
             mode='determinate',
@@ -1249,13 +1251,19 @@ class MeasureFrame(ttk_b.Frame):
         self.button_frame = ttk_b.Frame(self)
         self.button_frame.pack(pady=10)
 
-        self.measurebtn = ttk_b.Button(self.button_frame, text='measure', command=lambda: parent.onevent((MSG.MEASURE,)))
+        self.measurebtn = ttk_b.Button(self.button_frame, 
+                                       text='measure', 
+                                       command=lambda: parent.onevent((MSG.MEASURE,)))
         self.measurebtn.pack(side='left', padx=5)
 
-        self.cancelbtn = ttk_b.Button(self.button_frame, text='Cancel', command=lambda: parent.onevent((MSG.CANCEL,)))
+        self.cancelbtn = ttk_b.Button(self.button_frame,
+                                       text='Cancel',
+                                         command=lambda: parent.onevent((MSG.CANCEL,)))
         self.cancelbtn.pack(side='left', padx=5)
 
-        self.progress = ttk_b.Progressbar(self, mode='indeterminate', length=200)
+        self.progress = ttk_b.Progressbar(self,
+                                          mode='determinate', 
+                                          length=200)
         self.progress_label = ttk_b.Label(self, text='')
 
         self.updatestate(MeasurementState.DISABLED)
@@ -1276,8 +1284,7 @@ class MeasureFrame(ttk_b.Frame):
                 self.measurebtn.config(text='Stop Measurement')
                 self.measname.set_state('disabled')
                 self.show_progress()
-                self.progress.config(mode='indeterminate')
-                self.progress.start(10)
+                #self.progress.start(10)
                 self.cancelbtn.pack_forget()
                 if self.notebook:
                     self.notebook.tab(2, state='disabled') # Index 2 is the third tab (measurement state)
@@ -1294,7 +1301,7 @@ class MeasureFrame(ttk_b.Frame):
     
     def show_progress(self):
         if not self.progress.winfo_ismapped():
-            self.progress.pack(pady=15)
+            self.progress.pack(pady=15, ipady=25, fill='x', padx=10)
             self.progress_label.pack()
     
     def hide_progress(self):
@@ -1304,9 +1311,6 @@ class MeasureFrame(ttk_b.Frame):
             self.progress_label.pack_forget()
     
     def update_progress(self, progress):
-        if self.progress['mode'] != 'determinate':
-            self.progress.config(mode='determinate', maximum=100)
-        
         self.progress['value'] = progress
         self.progress_label.config(text=f'Measuring... {progress:.1f}%')
 
