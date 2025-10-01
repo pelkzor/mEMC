@@ -979,12 +979,14 @@ class PlotFrame(ttk_b.Frame):
         self.remove_limit() 
         if hasattr(self,'exceedslimitplot') and self.exceedslimitplot is not None:
             self.exceedslimitplot.remove()
-        if hasattr(self,'peakplot') and self.peakplot is not None:
-                self.peakplot.remove()
+        # if hasattr(self,'peakplot') and self.peakplot is not None:
+        #     self.peakplot.remove()
         if hasattr(self,'qpeakplot') and self.qpeakplot is not None:
-                self.qpeakplot.remove()
+            self.qpeakplot.remove()
         # Clear the canvas before drawing the plot
         self.ax.clear()
+        # Redraw peak selection markers
+        self.plotpeaks()
         # Remove all existing cursor selections to stop ghosts from appearing!
         if hasattr(self, 'cursor') and self.cursor is not None:
             for sel in self.cursor.selections:
