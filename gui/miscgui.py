@@ -887,6 +887,10 @@ class PlotFrame(ttk_b.Frame):
                 limit_x = self.limit_plot.get_xdata()
                 limit_y = self.limit_plot.get_ydata()
                 limit_val = float(np.interp(self.point[0], limit_x, limit_y))
+            if any(p['iid'] == iid for p in self.peaklist):
+                print(f"{iid} already in peaklist")
+                return
+
             self.peaklist.append({
                 'iid': iid,
                 'freq': self.point[0],
@@ -917,9 +921,9 @@ class PlotFrame(ttk_b.Frame):
                 margin = f"{margin:.2f}"
             else:
                 margin = ""
-            
-            self.treeview.insert('', ttk_b.END, iid=p['iid'], 
-                                values=(MHz, qpk, limit, margin, None))
+            if not self.treeview.exists(p['iid']):
+                self.treeview.insert('', ttk_b.END, iid=p['iid'], 
+                                    values=(MHz, qpk, limit, margin, None))
 
     def cleanpeakview(self):
         for i in self.treeview.get_children():
