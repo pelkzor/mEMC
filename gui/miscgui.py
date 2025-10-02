@@ -1331,6 +1331,7 @@ class MeasureFrame(ttk_b.Frame):
     
     def show_progress(self):
         if not self.progress.winfo_ismapped():
+            self.progress_label.config(text="Starting ...")
             self.progress_label.pack(pady=(10, 0), before=self.button_frame)
             self.progress.pack(pady=15, ipady=25, fill='x', padx=10, before=self.button_frame)
     
@@ -1347,10 +1348,10 @@ class MeasureFrame(ttk_b.Frame):
     def show_name_entry(self, readonly=False):
         if not self.measname.winfo_ismapped():
             self.measname.pack(pady=15, before=self.button_frame)
-            if readonly:
-                self.measname.entry.config(state='readonly')
-            else:
-                self.measname.entry.config(state='normal')
+        if readonly:
+            self.measname.entry.config(state='readonly')
+        else:
+            self.measname.entry.config(state='normal')
     
     def update_progress(self, progress):
         self.progress['value'] = progress
