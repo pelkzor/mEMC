@@ -1246,9 +1246,10 @@ class MeasureFrame(ttk_b.Frame):
     def __init__(self, parent, toolbar, notebook=None, plot_frame=None):
         super().__init__(parent)
 
+        self._state = None
+        self._reset_job = None
         self.toolbar = toolbar
         self.measname = EntryFrame(self, 'measname', 'Measurement Name', '', parent)
-        self.measname.pack(pady=15)
 
         self.plot_frame = plot_frame
 
@@ -1258,13 +1259,13 @@ class MeasureFrame(ttk_b.Frame):
         self.button_frame.pack(pady=10)
 
         self.measurebtn = ttk_b.Button(self.button_frame, 
-                                       text='measure', 
+                                       text='measure',
                                        command=lambda: parent.onevent((MSG.MEASURE,)))
         self.measurebtn.pack(side='left', padx=5)
 
         self.cancelbtn = ttk_b.Button(self.button_frame,
-                                       text='Cancel',
-                                         command=lambda: parent.onevent((MSG.CANCEL,)))
+                                      text='New Measurement',
+                                      command=lambda: parent.onevent((MSG.CANCEL,)))
         self.cancelbtn.pack(side='left', padx=5)
 
         self.progress = ttk_b.Progressbar(self,
@@ -1275,28 +1276,40 @@ class MeasureFrame(ttk_b.Frame):
         self.updatestate(MeasurementState.DISABLED)
 
     def updatestate(self, state: MeasurementState):
+        if state == self._state:
+            return
+        # cancel reset job if state changes from DONE to something else
+        # to avoid getting the button text overwritten
+        if state != MeasurementState.DONE and self._reset_job:
+            self.after_cancel(self._reset_job)
+            self._reset_job = None
+        self._state = state
+
         match state:
             case MeasurementState.DISABLED:                
-                self.measurebtn.config(text='Start Measurement', state='disabled')
-                self.measname.set_state('disabled')
+                self.measurebtn.config(text='Measure', state='disabled')
+                self.measurebtn.config(width=40)
+                self.hide_name_entry()
                 self.hide_progress()
                 self.cancelbtn.pack_forget()
             case MeasurementState.READY:
-                self.measurebtn.config(text='Start Measurement', state='enabled')
-                self.measname.set_state('normal')
+                self.measurebtn.config(text='Measure', state='enabled')
+                self.measurebtn.config(width=40)
+                self.show_name_entry()
                 self.hide_progress()
                 self.cancelbtn.pack_forget()
             case MeasurementState.RUNNING:
-                self.measurebtn.config(text='Stop Measurement')
-                self.measname.set_state('disabled')
+                self.measurebtn.config(text='Terminate')
+                self.measurebtn.config(width=40)
+                self.hide_name_entry()
                 self.show_progress()
-                #self.progress.start(10)
                 self.cancelbtn.pack_forget()
                 if self.notebook:
                     self.notebook.tab(2, state='disabled') # Index 2 is the third tab (measurement state)
             case MeasurementState.DONE:
-                self.measurebtn.config(text='Save Measurement')
-                self.measname.set_state('readonly')
+                self.measurebtn.config(text='Save')
+                self.measurebtn.config(width=17)
+                self.show_name_entry(True) # readonly
                 self.hide_progress()
                 self.cancelbtn.pack(side='left', padx=5) # Show cancel button
                 if self.notebook:
@@ -1315,10 +1328,37 @@ class MeasureFrame(ttk_b.Frame):
         if self.progress.winfo_ismapped():
             self.progress.pack_forget()
             self.progress_label.pack_forget()
+
+    def hide_name_entry(self):            
+        if self.measname.winfo_ismapped():
+            self.measname.pack_forget()
+
+    def show_name_entry(self, readonly=False):
+        if not self.measname.winfo_ismapped():
+            self.measname.pack(pady=15, before=self.button_frame)
+            if readonly:
+                self.measname.entry.config(state='readonly')
+            else:
+                self.measname.entry.config(state='normal')
     
     def update_progress(self, progress):
         self.progress['value'] = progress
         self.progress_label.config(text=f'Measuring... {progress:.1f}%')
+
+    # Save button feedback
+    def on_save(self):
+        self.measurebtn.config(state="disabled", text="Saving…")
+        self.after(1500, self._finish_save)
+
+    def _finish_save(self):
+        self.measurebtn.config(text="Saved ✓")
+        # Revert button text after 2 seconds if still in DONE state
+        self._reset_job = self.after(
+            2000,
+            lambda: self.measurebtn.config(text="Save", state="normal")
+                    if self._state == MeasurementState.DONE else None
+        )
+      
 
 class _MatchBreak(Exception): pass
 
@@ -1520,8 +1560,8 @@ class MeasureWindow(ttk_b.Window, EventHandler):
                 self.measurement.stopmeasurement()
                 self.cfgview.measureframe.progress_label.config(text="Stopping...")
             case MeasurementState.DONE:
-                self.measstate = MeasurementState.READY
                 self.savemeasurement()
+                self.cfgview.measureframe.on_save()
                 self.cfgview.measureframe.progress_label.config(text="Measurement saved")
                 self.result_browser.refresh_results()
         return True
