@@ -1363,13 +1363,14 @@ class MeasureFrame(ttk_b.Frame):
         self.after(1500, self._finish_save)
 
     def _finish_save(self):
-        self.measurebtn.config(text="Saved ✓")
-        # Revert button text after 2 seconds if still in DONE state
-        self._reset_job = self.after(
-            2000,
-            lambda: self.measurebtn.config(text="Save", state="normal")
-                    if self._state == MeasurementState.DONE else None
-        )
+        if(self._state == MeasurementState.DONE):
+            self.measurebtn.config(text="Saved ✓")
+            # Revert button text after 2 seconds if still in DONE state
+            self._reset_job = self.after(
+                2000,
+                lambda: self.measurebtn.config(text="Save", state="normal")
+                        if self._state == MeasurementState.DONE else None
+            )
       
 
 class _MatchBreak(Exception): pass
