@@ -1,10 +1,10 @@
 {
-	"name": "meascfg3",
+	"name": "30 - 200 MHz",
 	"type": "measurementtemplate",
 	"template" : {
 		"continuous":0, 
-		"fstart":40000000, 
-		"fstop":100000000, 
+		"fstart":30000000, 
+		"fstop":200000000, 
 		"rbw":120000, 
 		"preamplifier":1, 
 		"attenuation":0, 
