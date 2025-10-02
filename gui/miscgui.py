@@ -1320,8 +1320,8 @@ class MeasureFrame(ttk_b.Frame):
     
     def show_progress(self):
         if not self.progress.winfo_ismapped():
-            self.progress.pack(pady=15, ipady=25, fill='x', padx=10)
-            self.progress_label.pack()
+            self.progress_label.pack(pady=(10, 0), before=self.button_frame)
+            self.progress.pack(pady=15, ipady=25, fill='x', padx=10, before=self.button_frame)
     
     def hide_progress(self):
         self.progress.stop()
