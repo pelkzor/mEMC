@@ -659,6 +659,14 @@ class ToolBar(ttk_b.Frame):
             for cb in self.config_comboboxes:
                 cb.config(state=target)
 
+            if state in (MeasurementState.RUNNING, MeasurementState.DONE):
+                target = 'disabled'
+            else:  # DISABLED or READY
+                target = 'readonly'
+
+            for cb in self.config_comboboxes:
+                cb.config(state=target)
+
 class EUTFrame(ttk_b.Frame):
     def __init__(self, parent):
         super().__init__(parent)
