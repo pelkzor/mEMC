@@ -649,12 +649,15 @@ class ToolBar(ttk_b.Frame):
         self.standardcfgselect['values'] = [k for k in self.standards.keys()]
 
     def update_combobox_states(self, state):
-            if state == MeasurementState.RUNNING:
-                for cb in self.config_comboboxes:
-                    cb.config(state='disabled')
+            if state in (MeasurementState.RUNNING, MeasurementState.DONE):
+                target = 'disabled'
+            elif state == MeasurementState.READY:
+                target = 'readonly'
             else:
-                for cb in self.config_comboboxes:
-                    cb.config(state='readonly')
+                target = 'disabled'
+
+            for cb in self.config_comboboxes:
+                cb.config(state=target)
 
 class EUTFrame(ttk_b.Frame):
     def __init__(self, parent):

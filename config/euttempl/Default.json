@@ -1,5 +1,5 @@
 {
-	"name": "eutcfg1",
+	"name": "Default",
 	"type": "euttemplate",
 	"template" : {
 	"EUT Name": {"type":"str","value":"None","tip":"Name of device under test"},

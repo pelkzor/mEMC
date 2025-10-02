@@ -3,8 +3,8 @@
 	"type": "measurementtemplate",
 	"template" : {
 		"continuous":0, 
-		"fstart":50000000, 
-		"fstop":1000000000, 
+		"fstart":30000000, 
+		"fstop":200000000, 
 		"rbw":120000, 
 		"preamplifier":1, 
 		"attenuation":0, 

@@ -1,10 +1,11 @@
 {
-	"name": "eutcfg2",
+	"name": "Placeholder",
 	"type": "euttemplate",
 	"template" : {
 	"EUT Name": {"type":"str","value":"None","tip":"Name of device under test"},
     "HW Version": {"type":"str","value":"value1","tip":"Hardware version of equipment under test"},
-    "FW Version": {"type":"str","value":"None"},
+	"HW Patch Level": {"type":"str","value":"None","state":"readonly"},
+    "FW Version": {"type":"str","value":"None","state":"hidden"},
     "Notes": {"type":"text","value":"value1","unit":"unit1","minval":1,"maxval":1000}    
 	}
 }
