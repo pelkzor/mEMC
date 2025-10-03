@@ -701,10 +701,10 @@ class PlotFrame(ttk_b.Frame):
 
         self.pointframe = ttk_b.Frame(self)
         ttk_b.Label(self.pointframe, text='Add point', width=16, anchor='w').pack(side='left')
-        self.pointentryf = ttk_b.Entry(self.pointframe, state='readonly')
-        self.pointentryf.pack(side='left')
-        self.pointentrys = ttk_b.Entry(self.pointframe, state='readonly')
-        self.pointentrys.pack(side='left')
+        self.pointentryX = ttk_b.Entry(self.pointframe, state='readonly')
+        self.pointentryX.pack(side='left')
+        self.pointentryY = ttk_b.Entry(self.pointframe, state='readonly')
+        self.pointentryY.pack(side='left')
         self.btnaddpoint = ttk_b.Button(self.pointframe, text='Add', command=self.onaddpoint)
         self.btnaddpoint.pack(side='left')
 
@@ -937,6 +937,10 @@ class PlotFrame(ttk_b.Frame):
                                     values=(MHz, qpk, limit, margin, None))
 
     def cleanpeakview(self):
+        for entry in (self.pointentryX, self.pointentryY):
+            entry.config(state='normal')
+            entry.delete(0, END)
+            entry.config(state='readonly')
         for i in self.treeview.get_children():
             self.treeview.delete(i)
         self.peaklist.clear()
@@ -1133,14 +1137,14 @@ class PlotFrame(ttk_b.Frame):
 
     def onpointselect(self, evt):
         self.point = (evt.target[0], evt.target[1])
-        self.pointentryf.config(state = 'normal')
-        self.pointentrys.config(state = 'normal')
-        self.pointentryf.delete(0,END)
-        self.pointentryf.insert(0,str(self.point[0]))
-        self.pointentrys.delete(0,END)
-        self.pointentrys.insert(0,str(self.point[1]))
-        self.pointentryf.config(state = 'readonly')
-        self.pointentrys.config(state = 'readonly')
+        self.pointentryX.config(state = 'normal')
+        self.pointentryY.config(state = 'normal')
+        self.pointentryX.delete(0,END)
+        self.pointentryX.insert(0,str(self.point[0]))
+        self.pointentryY.delete(0,END)
+        self.pointentryY.insert(0,str(self.point[1]))
+        self.pointentryX.config(state = 'readonly')
+        self.pointentryY.config(state = 'readonly')
 
     def on_right_click(self, event):
         for sel in self.cursor.selections:
@@ -1316,7 +1320,9 @@ class MeasureFrame(ttk_b.Frame):
                 self.show_progress()
                 self.cancelbtn.pack_forget()
                 if self.notebook:
-                    self.notebook.tab(2, state='disabled') # Index 2 is the third tab (measurement state)
+                    # Disable EUT and Measurement config tabs during measurement
+                    self.notebook.tab(1, state='disabled')
+                    self.notebook.tab(2, state='disabled')
             case MeasurementState.DONE:
                 self.measurebtn.config(text='Save')
                 self.measurebtn.config(width=17)
@@ -1324,6 +1330,8 @@ class MeasureFrame(ttk_b.Frame):
                 self.hide_progress()
                 self.cancelbtn.pack(side='left', padx=5) # Show cancel button
                 if self.notebook:
+                    # Enable tabs again
+                    self.notebook.tab(1, state='normal')
                     self.notebook.tab(2, state='normal')
 
         if hasattr(self.toolbar, 'update_combobox_states'):
