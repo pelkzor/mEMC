@@ -990,6 +990,16 @@ class PlotFrame(ttk_b.Frame):
 
         self.add_limit(frequencies, limits)           
 
+    def update_frequency_axis(self, fstart, fstop):
+        if fstart is None or fstop is None:
+            return
+        if fstart <= 0 or fstop <= 0 or fstart >= fstop:
+            return
+        self.ax.set_xscale("log")
+        self.ax.set_xlim((fstart, fstop))
+        self.apply_frequency_ticks((fstart, fstop))
+        self.canvas.draw_idle()
+
     def plot(self, meas, title='title', xlim=(0,1_000_000_000), ylim=(0,125)):        
         if self.measurement is None:
             self.measurement = meas
@@ -1516,6 +1526,10 @@ class MeasureWindow(ttk_b.Window, EventHandler):
         if templ is not None:
             self.meastemplate = Measurement.modifytemplate(templ[_TEMPLATE_KEY])                    
             self.cfgview.updatemeasurementtemplate(self.meastemplate)
+            if hasattr(self, 'plotframe') and self.plotframe is not None:
+                fstart = self.meastemplate.get('fstart', {}).get('value')
+                fstop = self.meastemplate.get('fstop', {}).get('value')
+                self.plotframe.update_frequency_axis(fstart, fstop)
         return True
     
     @eventhandler((MSG.SETEUTTEMPLATE,))
